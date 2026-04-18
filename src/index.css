@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+/* ===== SCROLLBAR PERSONALIZADO ELEGANTE ===== */
+/* Estilos para navegadores basados en Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6; /* Fondo gris claro */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db; /* Barra gris oscuro */
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* Gris aún más oscuro al hover */
+}
+
+/* Estilos para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* ===== ANIMACIONES SUAVES ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ===== ESTILOS GENERALES MEJORADOS ===== */
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Selección de texto elegante */
+::selection {
+  background-color: #22c55e;
+  color: black;
+}
+
+/* ===== CLASES UTILITARIAS PERSONALIZADAS ===== */
+/* Scrollbar visible en elementos con overflow */
+.scrollbar-visible {
+  scrollbar-width: auto;
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  width: 12px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 0;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

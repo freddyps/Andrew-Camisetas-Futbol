@@ -1,6 +1,6 @@
 import { ShoppingCart } from 'lucide-react';
 
-export default function ProductCard({ item, onViewDetails, addToCart }) {
+export default function ProductCard({ item, addToCart }) {
   const detailHash = `#producto/${item.id}`;
 
   return (

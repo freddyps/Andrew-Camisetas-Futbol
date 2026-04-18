@@ -1,6 +1,6 @@
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 
-export default function CartDrawer({ open, onClose, cartItems, onRemove, onIncrement, onDecrement }) {
+export default function CartDrawer({ open, onClose, cartItems, onRemove, onIncrement, onDecrement, onCheckout }) {
   if (!open) return null;
 
   const totalPrice = cartItems
@@ -84,7 +84,10 @@ export default function CartDrawer({ open, onClose, cartItems, onRemove, onIncre
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              onClose();
+              onCheckout();
+            }}
             className="w-full rounded-none bg-black px-5 py-4 text-sm font-black uppercase tracking-[0.08em] text-white transition hover:bg-[#111]"
           >
             Ir a pagar

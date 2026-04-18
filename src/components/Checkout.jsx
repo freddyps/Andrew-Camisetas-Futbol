@@ -1,11 +1,21 @@
 import { CheckCircle2, Copy, Smartphone, Banknote } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-export default function Checkout({ cartItems, onBack }) {
+export default function Checkout({ cartItems, onBack, onClearCart }) {
   const [selectedMethod, setSelectedMethod] = useState('yape');
   const [transferName, setTransferName] = useState('');
   const [transferOperation, setTransferOperation] = useState('');
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [orderId] = useState(() => `AC-${Date.now()}`);
+
+  const handleConfirmAndClear = () => {
+    handleConfirm();
+    if (onClearCart) {
+      setTimeout(() => {
+        onClearCart();
+      }, 1500);
+    }
+  };
 
   const totalPrice = useMemo(
     () => cartItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2),
@@ -41,19 +51,19 @@ export default function Checkout({ cartItems, onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-[#22c55e] selection:text-black px-6 py-8 md:px-10">
+    <div className="min-h-screen bg-white text-black font-sans selection:bg-[#22c55e] selection:text-black px-6 py-8 md:px-10">
       <div className="max-w-6xl mx-auto">
         <button
           type="button"
           onClick={onBack}
-          className="mb-8 inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.15em] text-[#22c55e]"
+          className="mb-8 inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.15em] text-[#22c55e] hover:text-[#1fa75d]"
         >
           ← Volver a la tienda
         </button>
 
         <div className="mb-8">
-          <h1 className="text-4xl font-black uppercase tracking-[0.05em] text-white">Finalizar compra</h1>
-          <p className="mt-3 max-w-2xl text-sm text-gray-300">Completa tu pedido de forma segura seleccionando tu método de pago preferido.</p>
+          <h1 className="text-4xl font-black uppercase tracking-[0.05em] text-black">Finalizar compra</h1>
+          <p className="mt-3 max-w-2xl text-sm text-gray-600">Completa tu pedido de forma segura seleccionando tu método de pago preferido.</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_1.4fr]">
@@ -248,7 +258,7 @@ export default function Checkout({ cartItems, onBack }) {
 
               <button
                 type="button"
-                onClick={handleConfirm}
+                onClick={handleConfirmAndClear}
                 disabled={!selectedMethod || cartItems.length === 0 || (selectedMethod === 'transferencia' && (!transferName || !transferOperation))}
                 className="mt-6 w-full rounded-none bg-black px-6 py-4 text-sm font-black uppercase tracking-[0.08em] text-white transition hover:bg-[#111] disabled:cursor-not-allowed disabled:bg-gray-400"
               >
@@ -256,8 +266,10 @@ export default function Checkout({ cartItems, onBack }) {
               </button>
 
               {orderConfirmed && (
-                <div className="mt-5 rounded-none border border-green-200 bg-[#ecfdf5] p-4 text-sm text-[#047857]">
-                  Tu pedido ha sido registrado. Revisa tu correo o vuelve a la tienda para seguir comprando.
+                <div className="mt-5 rounded-none border border-green-200 bg-[#ecfdf5] p-4 space-y-2">
+                  <p className="text-sm font-black text-[#047857]">✓ Pedido confirmado exitosamente</p>
+                  <p className="text-xs text-[#047857]">ID: {orderId}</p>
+                  <p className="text-xs text-[#047857]">Revisa tu correo para más detalles. Tu carrito se vaciará en unos segundos.</p>
                 </div>
               )}
             </div>

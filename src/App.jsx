@@ -6,13 +6,60 @@ import ProductsPage from './components/ProductsPage';
 import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
+import SearchPage from './components/SearchPage';
+import UserProfile from './components/UserProfile';
+import Register from './components/Register';
+import About from './components/About';
+import SupportWidget from './components/SupportWidget';
 import { products as allProducts } from './data/products';
 
 function App() {
-  const [pagina, setPagina] = useState('home');
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [cartItems, setCartItems] = useState([]);
+  const parseHashState = () => {
+    const hash = window.location.hash.slice(1);
+
+    if (hash.startsWith('producto/')) {
+      const id = Number(hash.split('/')[1]);
+      const product = allProducts.find((item) => item.id === id);
+      if (product) {
+        return { page: 'detalle', product };
+      }
+    }
+
+    if (hash === 'productos') return { page: 'productos', product: null };
+    if (hash === 'checkout') return { page: 'checkout', product: null };
+    if (hash === 'buscar') return { page: 'buscar', product: null };
+    if (hash === 'perfil') return { page: 'perfil', product: null };
+    if (hash === 'nosotros') return { page: 'nosotros', product: null };
+    if (hash === 'registro') return { page: 'registro', product: null };
+
+    return { page: 'home', product: null };
+  };
+
+  const getStoredCart = () => {
+    try {
+      const stored = window.localStorage.getItem('andrew_cart');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getStoredUser = () => {
+    try {
+      const stored = window.localStorage.getItem('andrew_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const initialRoute = parseHashState();
+
+  const [pagina, setPagina] = useState(initialRoute.page);
+  const [selectedProduct, setSelectedProduct] = useState(initialRoute.product);
+  const [cartItems, setCartItems] = useState(getStoredCart);
   const [cartOpen, setCartOpen] = useState(false);
+  const [user, setUser] = useState(getStoredUser);
   const [searchQuery, setSearchQuery] = useState('');
   const [leagueFilter, setLeagueFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -66,21 +113,35 @@ function App() {
     setCartItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  const toggleCart = () => setCartOpen((open) => !open);
+
   const updateCartQuantity = (itemId, delta) => {
     setCartItems((prev) =>
       prev
         .map((item) =>
-          item.id === itemId
-            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-            : item
+          item.id === itemId ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
         )
         .filter((item) => item.quantity > 0)
     );
   };
 
-  const toggleCart = () => setCartOpen((open) => !open);
+  const handleLogin = (userData) => {
+    setUser(userData);
+    window.localStorage.setItem('andrew_user', JSON.stringify(userData));
+    navigateTo('perfil');
+  };
 
-  const parseHash = () => {
+  const handleLogout = () => {
+    setUser(null);
+    window.localStorage.removeItem('andrew_user');
+    navigateTo('home');
+  };
+
+  const handleHashChange = () => {
     const hash = window.location.hash.slice(1);
     if (hash.startsWith('producto/')) {
       const id = Number(hash.split('/')[1]);
@@ -101,6 +162,26 @@ function App() {
       setPagina('checkout');
       return;
     }
+    if (hash === 'buscar') {
+      setSelectedProduct(null);
+      setPagina('buscar');
+      return;
+    }
+    if (hash === 'perfil') {
+      setSelectedProduct(null);
+      setPagina('perfil');
+      return;
+    }
+    if (hash === 'nosotros') {
+      setSelectedProduct(null);
+      setPagina('nosotros');
+      return;
+    }
+    if (hash === 'registro') {
+      setSelectedProduct(null);
+      setPagina('registro');
+      return;
+    }
     setSelectedProduct(null);
     setPagina('home');
   };
@@ -114,17 +195,34 @@ function App() {
       window.location.hash = 'productos';
     } else if (page === 'checkout') {
       window.location.hash = 'checkout';
+    } else if (page === 'buscar') {
+      window.location.hash = 'buscar';
+    } else if (page === 'perfil') {
+      window.location.hash = 'perfil';
+    } else if (page === 'registro') {
+      window.location.hash = 'registro';
+    } else if (page === 'nosotros') {
+      window.location.hash = 'nosotros';
     } else {
       window.location.hash = 'home';
     }
   };
 
   useEffect(() => {
-    parseHash();
-    const onHashChange = () => parseHash();
+    const onHashChange = () => handleHashChange();
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('andrew_cart', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  useEffect(() => {
+    if (user) {
+      window.localStorage.setItem('andrew_user', JSON.stringify(user));
+    }
+  }, [user]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -176,7 +274,23 @@ function App() {
           addToCart={addToCart}
         />
       ) : pagina === 'checkout' ? (
-        <Checkout cartItems={cartItems} onBack={() => navigateTo('productos')} />
+        <Checkout cartItems={cartItems} onBack={() => navigateTo('productos')} onClearCart={clearCart} />
+      ) : pagina === 'buscar' ? (
+        <SearchPage searchQuery={searchQuery} setSearchQuery={setSearchQuery} onBack={() => navigateTo('productos')} onViewDetails={openProductDetail} />
+      ) : pagina === 'perfil' ? (
+        user ? (
+          <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+        ) : (
+          <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
+        )
+      ) : pagina === 'registro' ? (
+        user ? (
+          <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+        ) : (
+          <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
+        )
+      ) : pagina === 'nosotros' ? (
+        <About onBack={() => navigateTo('home')} />
       ) : (
         <Home products={allProducts} navigateTo={navigateTo} onViewDetails={openProductDetail} addToCart={addToCart} />
       )}
@@ -188,7 +302,10 @@ function App() {
         onRemove={removeCartItem}
         onIncrement={(id) => updateCartQuantity(id, 1)}
         onDecrement={(id) => updateCartQuantity(id, -1)}
+        onCheckout={() => navigateTo('checkout')}
       />
+      {/* Widget de soporte flotante - disponible en todas las páginas */}
+      <SupportWidget />
       <Footer />
     </div>
   );
