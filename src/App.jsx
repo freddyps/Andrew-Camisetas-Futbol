@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './components/Home';
@@ -135,7 +136,8 @@ function App() {
     navigateTo('perfil');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     window.localStorage.removeItem('andrew_user');
     navigateTo('home');
@@ -223,6 +225,46 @@ function App() {
       window.localStorage.setItem('andrew_user', JSON.stringify(user));
     }
   }, [user]);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error cargando sesión de Supabase:', error.message);
+        return;
+      }
+
+      const session = data?.session;
+      if (session?.user) {
+        const userData = {
+          name: session.user.user_metadata?.name || 'Usuario',
+          email: session.user.email,
+          phone: session.user.user_metadata?.phone || '',
+          address: session.user.user_metadata?.address || '',
+        };
+        setUser(userData);
+      }
+    };
+
+    loadSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.name || 'Usuario',
+          email: session.user.email,
+          phone: session.user.user_metadata?.phone || '',
+          address: session.user.user_metadata?.address || '',
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

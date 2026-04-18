@@ -1,5 +1,6 @@
 import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../supabaseClient';
 
 // ============================================================================
 // COMPONENTE: Register (Página de registro y login)
@@ -50,7 +51,7 @@ export default function Register({ onBack, onLogin }) {
   };
 
   // Manejar envío de login
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     
     if (!loginForm.email || !loginForm.password) {
@@ -58,23 +59,51 @@ export default function Register({ onBack, onLogin }) {
       return;
     }
 
-    // Validar email
     if (!loginForm.email.includes('@')) {
       setMessage('Por favor ingresa un email válido');
       return;
     }
 
-    setMessage('✅ ¡Sesión iniciada exitosamente!');
-    setTimeout(() => {
-      onLogin({
-        name: 'Usuario',
-        email: loginForm.email,
-      });
-    }, 1000);
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setMessage(
+        'No se encontró la configuración de Supabase. Revisa tu archivo .env y reinicia el servidor.'
+      );
+      return;
+    }
+
+    setMessage('Cargando...');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+
+    if (error) {
+      const message =
+        error.message === 'Failed to fetch'
+          ? 'No se puede conectar a Supabase. Verifica tu URL y anon key en .env.'
+          : error.message || 'No se pudo iniciar sesión.';
+      setMessage(message);
+      return;
+    }
+
+    const user = data.user;
+    if (!user) {
+      setMessage('No se encontró el usuario.');
+      return;
+    }
+
+    setMessage('✅ Sesión iniciada exitosamente.');
+    onLogin({
+      name: user.user_metadata?.name || 'Usuario',
+      email: user.email,
+      phone: user.user_metadata?.phone || '',
+      address: user.user_metadata?.address || '',
+    });
   };
 
   // Manejar envío de registro
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     
     if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
@@ -97,15 +126,49 @@ export default function Register({ onBack, onLogin }) {
       return;
     }
 
-    setMessage('✅ ¡Registro exitoso! Iniciando sesión...');
-    setTimeout(() => {
-      onLogin({
-        name: registerForm.name,
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setMessage(
+        'No se encontró la configuración de Supabase. Revisa tu archivo .env y reinicia el servidor.'
+      );
+      return;
+    }
+
+    setMessage('Creando cuenta...');
+
+    const { data, error } = await supabase.auth.signUp(
+      {
         email: registerForm.email,
-        phone: registerForm.phone,
-        address: registerForm.address,
+        password: registerForm.password,
+      },
+      {
+        data: {
+          name: registerForm.name,
+          phone: registerForm.phone,
+          address: registerForm.address,
+        },
+      }
+    );
+
+    if (error) {
+      const message =
+        error.message === 'Failed to fetch'
+          ? 'No se puede conectar a Supabase. Verifica tu URL y anon key en .env.'
+          : error.message || 'No se pudo registrar la cuenta.';
+      setMessage(message);
+      return;
+    }
+
+    if (data.user) {
+      setMessage('✅ Registro exitoso. Comprueba tu email si es necesario.');
+      onLogin({
+        name: data.user.user_metadata?.name || registerForm.name,
+        email: data.user.email,
+        phone: data.user.user_metadata?.phone || registerForm.phone,
+        address: data.user.user_metadata?.address || registerForm.address,
       });
-    }, 1500);
+    } else {
+      setMessage('Registro completado. Revisa tu correo para confirmar la cuenta.');
+    }
   };
 
   return (
