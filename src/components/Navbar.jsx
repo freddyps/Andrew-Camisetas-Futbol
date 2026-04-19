@@ -1,5 +1,6 @@
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { useAppContext } from '../context/AppContext';
 
 // ============================================================================
 // COMPONENTE: Navbar (Barra de navegación superior)
@@ -14,6 +15,7 @@ import { useState } from 'react';
 
 export default function Navbar({ navigateTo, cartCount, toggleCart }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAppContext();
 
   // Clase reutilizable para los links del menú
   const linkClass = (color) =>
@@ -77,10 +79,13 @@ export default function Navbar({ navigateTo, cartCount, toggleCart }) {
             setMenuOpen(false);
             navigateTo('perfil');
           }} 
-          className="cursor-pointer text-white hover:text-[#22c55e] transition-colors"
-          title="Iniciar sesión o registrarse"
+          className="flex items-center gap-2 cursor-pointer text-white hover:text-[#22c55e] transition-colors"
+          title={user ? `Ver perfil de ${user.name}` : 'Iniciar sesión o registrarse'}
         >
           <User size={20} />
+          <span className="hidden md:inline text-sm font-semibold uppercase tracking-[0.18em]">
+            {user ? `Hola, ${user.name}` : 'Iniciar sesión'}
+          </span>
         </button>
 
         <button 

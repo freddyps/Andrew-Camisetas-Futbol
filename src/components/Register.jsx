@@ -1,4 +1,4 @@
-import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../supabaseClient';
 
@@ -102,6 +102,34 @@ export default function Register({ onBack, onLogin }) {
     });
   };
 
+  const handleGoogleSignIn = async () => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setMessage(
+        'No se encontró la configuración de Supabase. Revisa tu archivo .env y reinicia el servidor.'
+      );
+      return;
+    }
+
+    setMessage('Redirigiendo a Google...');
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      setMessage(
+        error.message === 'Failed to fetch'
+          ? 'No se puede conectar a Supabase. Verifica tu URL y anon key en .env.'
+          : error.message || 'No se pudo iniciar sesión con Google.'
+      );
+    }
+  };
+
+  const passwordsMatch = registerForm.password && registerForm.confirmPassword && registerForm.password === registerForm.confirmPassword;
+
   // Manejar envío de registro
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -116,7 +144,7 @@ export default function Register({ onBack, onLogin }) {
       return;
     }
 
-    if (registerForm.password !== registerForm.confirmPassword) {
+    if (!passwordsMatch) {
       setMessage('Las contraseñas no coinciden');
       return;
     }
@@ -278,6 +306,14 @@ export default function Register({ onBack, onLogin }) {
                 >
                   Iniciar sesión
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="w-full rounded-none border border-gray-300 bg-white py-4 text-sm font-semibold uppercase tracking-[0.12em] text-gray-900 hover:bg-gray-100 transition"
+                >
+                  Iniciar con Google
+                </button>
               </form>
             ) : (
               <form onSubmit={handleRegisterSubmit} className="space-y-5">
@@ -348,6 +384,14 @@ export default function Register({ onBack, onLogin }) {
                         className="w-full rounded-none border border-gray-300 px-4 pl-12 py-3 text-sm text-black outline-none focus:border-[#22c55e] focus:ring-2 focus:ring-[#22c55e]/20 transition"
                       />
                     </div>
+                    {registerForm.confirmPassword && (
+                      <p className={`mt-2 flex items-center gap-2 text-xs font-semibold ${
+                        passwordsMatch ? 'text-green-700' : 'text-red-600'
+                      }`}>
+                        <CheckCircle size={14} className={passwordsMatch ? 'text-green-700' : 'text-red-600'} />
+                        {passwordsMatch ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden'}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -396,6 +440,14 @@ export default function Register({ onBack, onLogin }) {
                   className="w-full rounded-none bg-[#111827] py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#222b3b]"
                 >
                   Crear cuenta
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="w-full rounded-none border border-gray-300 bg-white py-4 text-sm font-semibold uppercase tracking-[0.12em] text-gray-900 hover:bg-gray-100 transition"
+                >
+                  Registrarse con Google
                 </button>
 
                 <p className="text-xs text-gray-500 text-center">

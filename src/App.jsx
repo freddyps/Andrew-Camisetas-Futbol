@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from './supabaseClient';
+import React, { useCallback, useEffect, useState } from 'react';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
+import { getCache, setCache } from './utils/cache';
+import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './components/Home';
@@ -36,15 +38,6 @@ function App() {
     return { page: 'home', product: null };
   };
 
-  const getStoredCart = () => {
-    try {
-      const stored = window.localStorage.getItem('andrew_cart');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  };
-
   const getStoredUser = () => {
     try {
       const stored = window.localStorage.getItem('andrew_user');
@@ -54,13 +47,39 @@ function App() {
     }
   };
 
+  const getCartStorageKey = (currentUser) =>
+    currentUser?.email ? `andrew_cart_${currentUser.email}` : 'andrew_cart_guest';
+
+  const getStoredCart = useCallback((currentUser) => {
+    try {
+      const stored = window.localStorage.getItem(getCartStorageKey(currentUser));
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const mergeCartItems = useCallback((baseItems, loadedItems) => {
+    const merged = [...baseItems];
+    loadedItems.forEach((item) => {
+      const existing = merged.find((cartItem) => cartItem.id === item.id);
+      if (existing) {
+        existing.quantity = Math.max(existing.quantity, item.quantity);
+      } else {
+        merged.push(item);
+      }
+    });
+    return merged;
+  }, []);
+
   const initialRoute = parseHashState();
 
   const [pagina, setPagina] = useState(initialRoute.page);
   const [selectedProduct, setSelectedProduct] = useState(initialRoute.product);
-  const [cartItems, setCartItems] = useState(getStoredCart);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [products, setProducts] = useState(() => getCache('products') || allProducts);
   const [user, setUser] = useState(getStoredUser);
+  const [cartItems, setCartItems] = useState(() => getStoredCart(getStoredUser()));
+  const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [leagueFilter, setLeagueFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -133,6 +152,13 @@ function App() {
   const handleLogin = (userData) => {
     setUser(userData);
     window.localStorage.setItem('andrew_user', JSON.stringify(userData));
+
+    const existingUserCart = getStoredCart(userData);
+    const guestCart = getStoredCart(null);
+    const mergedCart = mergeCartItems(guestCart, existingUserCart);
+    setCartItems(mergedCart);
+    window.localStorage.removeItem(getCartStorageKey(null));
+
     navigateTo('perfil');
   };
 
@@ -217,8 +243,41 @@ function App() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('andrew_cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    const fetchProducts = async () => {
+      const cachedProducts = getCache('products');
+      if (cachedProducts && cachedProducts.length) {
+        setProducts(cachedProducts);
+        return;
+      }
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setProducts(allProducts);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.from('products').select('*');
+        if (!error && data && data.length) {
+          setProducts(data);
+          setCache('products', data, 60 * 60 * 12);
+        } else {
+          setProducts(allProducts);
+        }
+      } catch {
+        setProducts(allProducts);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(getCartStorageKey(user), JSON.stringify(cartItems));
+    } catch {
+      // Ignorar fallos de almacenamiento.
+    }
+  }, [cartItems, user]);
 
   useEffect(() => {
     if (user) {
@@ -243,6 +302,7 @@ function App() {
           address: session.user.user_metadata?.address || '',
         };
         setUser(userData);
+        setCartItems(getStoredCart(userData));
       }
     };
 
@@ -250,21 +310,24 @@ function App() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser({
+        const userData = {
           name: session.user.user_metadata?.name || 'Usuario',
           email: session.user.email,
           phone: session.user.user_metadata?.phone || '',
           address: session.user.user_metadata?.address || '',
-        });
+        };
+        setUser(userData);
+        setCartItems((prev) => mergeCartItems(prev, getStoredCart(userData)));
       } else {
         setUser(null);
+        setCartItems(getStoredCart(null));
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [getStoredCart, mergeCartItems]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -275,7 +338,7 @@ function App() {
     navigateTo('productos');
   };
 
-  const filteredProducts = allProducts.filter((item) => {
+  const filteredProducts = products.filter((item) => {
     const query = searchQuery.toLowerCase().trim();
     const searchMatch =
       !query ||
@@ -296,60 +359,80 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-[#22c55e] selection:text-black">
-      <Navbar pagina={pagina} navigateTo={navigateTo} cartCount={cartCount} toggleCart={toggleCart} />
+    <AppProvider
+      value={{
+        user,
+        cartItems,
+        cartCount,
+        products,
+        addToCart,
+        removeCartItem,
+        updateCartQuantity,
+        clearCart,
+        setUser,
+      }}
+    >
+      <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-[#22c55e] selection:text-black">
+        <Navbar pagina={pagina} navigateTo={navigateTo} cartCount={cartCount} toggleCart={toggleCart} />
 
-      {pagina === 'detalle' && selectedProduct ? (
-        <ProductDetail item={selectedProduct} onBack={closeProductDetail} onAddToCart={addToCart} />
-      ) : pagina === 'productos' ? (
-        <ProductsPage
-          products={allProducts}
-          filteredProducts={filteredProducts}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          leagueFilter={leagueFilter}
-          setLeagueFilter={setLeagueFilter}
-          priceFilter={priceFilter}
-          setPriceFilter={setPriceFilter}
-          onBack={() => navigateTo('home')}
-          onViewDetails={openProductDetail}
-          addToCart={addToCart}
+        {pagina === 'detalle' && selectedProduct ? (
+          <ProductDetail item={selectedProduct} onBack={closeProductDetail} onAddToCart={addToCart} />
+        ) : pagina === 'productos' ? (
+          <ProductsPage
+            products={products}
+            filteredProducts={filteredProducts}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            leagueFilter={leagueFilter}
+            setLeagueFilter={setLeagueFilter}
+            priceFilter={priceFilter}
+            setPriceFilter={setPriceFilter}
+            onBack={() => navigateTo('home')}
+            onViewDetails={openProductDetail}
+            addToCart={addToCart}
+          />
+        ) : pagina === 'checkout' ? (
+          <Checkout cartItems={cartItems} onBack={() => navigateTo('productos')} onClearCart={clearCart} />
+        ) : pagina === 'buscar' ? (
+          <SearchPage
+            products={products}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onBack={() => navigateTo('productos')}
+            onViewDetails={openProductDetail}
+          />
+        ) : pagina === 'perfil' ? (
+          user ? (
+            <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+          ) : (
+            <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
+          )
+        ) : pagina === 'registro' ? (
+          user ? (
+            <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+          ) : (
+            <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
+          )
+        ) : pagina === 'nosotros' ? (
+          <About onBack={() => navigateTo('home')} />
+        ) : (
+          <Home products={products} navigateTo={navigateTo} onViewDetails={openProductDetail} addToCart={addToCart} />
+        )}
+
+        <CartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cartItems={cartItems}
+          onRemove={removeCartItem}
+          onIncrement={(id) => updateCartQuantity(id, 1)}
+          onDecrement={(id) => updateCartQuantity(id, -1)}
+          onCheckout={() => navigateTo('checkout')}
         />
-      ) : pagina === 'checkout' ? (
-        <Checkout cartItems={cartItems} onBack={() => navigateTo('productos')} onClearCart={clearCart} />
-      ) : pagina === 'buscar' ? (
-        <SearchPage searchQuery={searchQuery} setSearchQuery={setSearchQuery} onBack={() => navigateTo('productos')} onViewDetails={openProductDetail} />
-      ) : pagina === 'perfil' ? (
-        user ? (
-          <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
-        ) : (
-          <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
-        )
-      ) : pagina === 'registro' ? (
-        user ? (
-          <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
-        ) : (
-          <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
-        )
-      ) : pagina === 'nosotros' ? (
-        <About onBack={() => navigateTo('home')} />
-      ) : (
-        <Home products={allProducts} navigateTo={navigateTo} onViewDetails={openProductDetail} addToCart={addToCart} />
-      )}
-
-      <CartDrawer
-        open={cartOpen}
-        onClose={() => setCartOpen(false)}
-        cartItems={cartItems}
-        onRemove={removeCartItem}
-        onIncrement={(id) => updateCartQuantity(id, 1)}
-        onDecrement={(id) => updateCartQuantity(id, -1)}
-        onCheckout={() => navigateTo('checkout')}
-      />
-      {/* Widget de soporte flotante - disponible en todas las páginas */}
-      <SupportWidget />
-      <Footer />
-    </div>
+        {/* Widget de soporte flotante - disponible en todas las páginas */}
+        <SupportWidget />
+        <Footer />
+      </div>
+    </AppProvider>
   );
 }
 

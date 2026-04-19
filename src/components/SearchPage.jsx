@@ -1,30 +1,30 @@
 import { Search } from 'lucide-react';
 import { useMemo } from 'react';
-import { products as allProducts } from '../data/products';
 
 // ============================================================================
 // COMPONENTE: SearchPage (Página de búsqueda expandida)
 // Descripción: Pantalla de búsqueda limpia con resultados en tiempo real
 // Props:
+//   - products: lista de productos para buscar
 //   - searchQuery: query de búsqueda actual
 //   - setSearchQuery: función para actualizar el query
 //   - onBack: función para volver a la página anterior
 //   - onViewDetails: función para ver detalles de un producto
 // ============================================================================
 
-export default function SearchPage({ searchQuery, setSearchQuery, onBack, onViewDetails }) {
+export default function SearchPage({ products, searchQuery, setSearchQuery, onBack, onViewDetails }) {
   const filteredProducts = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return [];
 
-    return allProducts.filter(
+    return products.filter(
       (item) =>
         item.equipo.toLowerCase().includes(query) ||
         item.liga.toLowerCase().includes(query) ||
         item.categoria.toLowerCase().includes(query) ||
         item.precio.toString().includes(query)
     );
-  }, [searchQuery]);
+  }, [searchQuery, products]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
