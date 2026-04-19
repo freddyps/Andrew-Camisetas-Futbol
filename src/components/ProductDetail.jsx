@@ -33,7 +33,7 @@ export default function ProductDetail({ item, onBack, onAddToCart }) {
         <div className="grid gap-6 md:gap-8 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
             <div className="overflow-hidden rounded-none border border-gray-200 bg-gray-100">
-              <img src={selectedImage} alt={item.equipo} className="w-full object-cover h-[340px] md:h-[460px]" />
+              <img src={selectedImage} alt={`Camiseta ${item.equipo} ${item.categoria} 2024/25 vista principal - Andrew Camisetas`} className="w-full object-cover h-[340px] md:h-[460px]" />
             </div>
 
             <div className="grid grid-cols-4 gap-4">
@@ -44,7 +44,7 @@ export default function ProductDetail({ item, onBack, onAddToCart }) {
                   onClick={() => setSelectedImage(src)}
                   className={`overflow-hidden rounded-none border p-1 transition ${selectedImage === src ? 'border-[#22c55e] bg-[#d6f9dc]' : 'border-gray-200 bg-white hover:border-[#22c55e]'}`}
                 >
-                  <img src={src} alt={`${item.equipo} ${index + 1}`} className="h-24 w-full object-cover" />
+                  <img src={src} alt={`Camiseta ${item.equipo} - Vista ${index + 1} - ${item.categoria}`} className="h-24 w-full object-cover" />
                 </button>
               ))}
             </div>

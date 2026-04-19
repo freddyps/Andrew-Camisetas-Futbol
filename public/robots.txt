@@ -1,0 +1,45 @@
+# Andrew Camisetas - robots.txt
+# Permite que los motores de búsqueda rastreeen el sitio completo
+
+User-agent: *
+Allow: /
+Allow: /src/
+Allow: /assets/
+
+# Disallow específico para rutas de administración (si las hay)
+Disallow: /admin/
+Disallow: /api/private/
+
+# Crawl delay para no sobrecargar el servidor
+Crawl-delay: 1
+
+# Especificar la velocidad de rastreo
+Request-rate: 1/1s
+
+# Mapa del sitio (cuando lo tengas, descomenta)
+# Sitemap: https://andrew-camisetas.com/sitemap.xml
+
+# Google Search Console
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Yahoo
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+# Baidu
+User-agent: Baidu
+Allow: /
+Crawl-delay: 1
+
+# Yandex
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 1

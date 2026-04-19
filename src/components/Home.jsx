@@ -9,7 +9,7 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart })
           <img
             src="https://i.pinimg.com/originals/c6/a8/83/c6a883c8812b4de2c600cd99946623b1.jpg"
             className="w-full h-full object-cover brightness-[0.9] grayscale-[10%]"
-            alt="Fondo futbolistas"
+            alt="Futbolistas profesionales - Andrew Camisetas tienda online de camisetas de fútbol"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/50 to-transparent"></div>
         </div>

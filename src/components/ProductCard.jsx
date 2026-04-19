@@ -6,7 +6,7 @@ export default function ProductCard({ item, addToCart }) {
   return (
     <div className="group overflow-hidden rounded-none border border-gray-100 bg-white p-4 shadow-sm transition-all duration-500 hover:shadow-2xl">
       <div className="relative aspect-[3/4] overflow-hidden rounded-none bg-gray-100 mb-6">
-        <img src={item.image} alt={item.equipo} className="w-full h-full object-cover" />
+        <img src={item.image} alt={`Camiseta ${item.equipo} ${item.categoria} 2024/25 - ${item.liga}`} className="w-full h-full object-cover" />
         <div className="absolute top-0 left-0 bg-black text-white text-[9px] font-black px-4 py-2 uppercase z-10">LA LIGA</div>
       </div>
       <div className="space-y-1 text-left px-2">
