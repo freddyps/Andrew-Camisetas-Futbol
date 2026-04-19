@@ -1,6 +1,7 @@
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
+import heroImage from '../assets/hero.png';
 
 const CAROUSEL_SLIDES = [
   {
@@ -60,50 +61,55 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart })
           <img
             src="https://i.pinimg.com/originals/c6/a8/83/c6a883c8812b4de2c600cd99946623b1.jpg"
             className="w-full h-full object-cover brightness-[0.9] grayscale-[10%]"
-            alt="Futbolistas profesionales - Andrew Camisetas tienda online de camisetas de fútbol"
+            alt="Fondo futbolistas"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/50 to-transparent"></div>
         </div>
 
-        <div className="relative z-10 max-w-3xl px-4 sm:px-0 pt-16 pb-20 sm:pt-20 sm:pb-24">
-          <div className="inline-flex items-center gap-3 bg-white/10 border border-white/15 px-5 py-2 rounded-none text-[#22c55e] text-[13px] font-black mb-8 tracking-[0.08em] uppercase shadow-sm">
-            <span className="w-2 h-2 bg-[#22c55e] rounded-none animate-pulse"></span>
-            Temporada 2025/26
-          </div>
+        <div className="relative z-10 max-w-7xl px-4 sm:px-0 pt-12 pb-20 sm:pt-20 sm:pb-24">
+          <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] items-center">
+            <div>
+              <div className="inline-flex items-center gap-3 bg-white/10 border border-white/15 px-5 py-2 rounded-none text-[#22c55e] text-[13px] font-black mb-8 tracking-[0.08em] uppercase shadow-sm">
+                <span className="w-2 h-2 bg-[#22c55e] rounded-none animate-pulse"></span>
+                Temporada 2025/26
+              </div>
 
-          <p className="text-sm uppercase tracking-[0.3em] text-white/70 mb-4">Tienda oficial de camisetas</p>
-          <h2 className="text-5xl sm:text-[5.5rem] md:text-[6rem] font-black uppercase mb-7 tracking-tight leading-[0.95]">
-            La pasión <br />
-            <span className="text-[#22c55e]">en tu piel</span>
-          </h2>
+              <p className="text-sm uppercase tracking-[0.3em] text-white/70 mb-4">Tienda oficial de camisetas</p>
+              <h2 className="text-5xl sm:text-[5.5rem] md:text-[6rem] font-black uppercase mb-7 tracking-tight leading-[0.95]">
+                La pasión <br />
+                <span className="text-[#22c55e]">en tu piel</span>
+              </h2>
 
-          <p className="text-white/85 text-base sm:text-lg md:text-[20px] mb-12 max-w-2xl leading-relaxed font-medium">
-            Las mejores camisetas de los equipos más grandes del mundo. Calidad premium, diseños auténticos y entrega segura.
-          </p>
+              <p className="text-white/85 text-base sm:text-lg md:text-[20px] mb-12 max-w-2xl leading-relaxed font-medium">
+                Las mejores camisetas de los equipos más grandes del mundo. Calidad premium, diseños auténticos y entrega segura.
+              </p>
 
-          <button onClick={() => navigateTo('productos')} className="bg-[#22c55e] text-black font-black px-14 py-4 rounded-none hover:bg-[#1fa75d] transition-all inline-flex items-center justify-center gap-3 uppercase text-sm tracking-[0.08em] shadow-2xl shadow-[#22c55e]/20">
-            Reservar ahora <ArrowRight size={18} />
-          </button>
+              <button onClick={() => navigateTo('productos')} className="bg-[#22c55e] text-black font-black px-14 py-4 rounded-none hover:bg-[#1fa75d] transition-all inline-flex items-center justify-center gap-3 uppercase text-sm tracking-[0.08em] shadow-2xl shadow-[#22c55e]/20">
+                Reservar ahora <ArrowRight size={18} />
+              </button>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
-              <p className="text-4xl md:text-5xl font-black leading-none text-white">500+</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Productos</p>
+              <div className="mt-16 grid gap-6 sm:grid-cols-3">
+                <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
+                  <p className="text-4xl md:text-5xl font-black leading-none text-white">500+</p>
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Productos</p>
+                </div>
+                <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
+                  <p className="text-4xl md:text-5xl font-black leading-none text-white">100%</p>
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Auténticas</p>
+                </div>
+                <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
+                  <p className="text-4xl md:text-5xl font-black leading-none text-white">24/7</p>
+                  <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Envío rápido</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
-              <p className="text-4xl md:text-5xl font-black leading-none text-white">100%</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Auténticas</p>
-            </div>
-            <div className="rounded-none border border-white/10 bg-white/10 p-8 backdrop-blur-sm">
-              <p className="text-4xl md:text-5xl font-black leading-none text-white">24/7</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-white/70 mt-2">Envío rápido</p>
-            </div>
+
           </div>
         </div>
       </header>
 
       {/* ===== CARRUSEL FUTBOLERO ===== */}
-      <section className="relative w-full overflow-hidden bg-black py-16 md:py-24">
+      <section className="relative w-full overflow-hidden bg-white py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4">
           <div className="relative">
             {/* Slide actual */}
