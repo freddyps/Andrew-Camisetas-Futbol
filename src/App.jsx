@@ -303,6 +303,11 @@ function App() {
         };
         setUser(userData);
         setCartItems(getStoredCart(userData));
+        
+        // Limpia los parámetros de la URL después del login
+        if (window.location.hash.includes('access_token')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       }
     };
 
