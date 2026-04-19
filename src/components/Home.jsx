@@ -1,7 +1,58 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 
+const CAROUSEL_SLIDES = [
+  {
+    id: 1,
+    title: 'Colección Premier League',
+    description: 'Las mejores camisetas de los equipos ingleses',
+    bg: 'linear-gradient(135deg, #003399 0%, #0066cc 100%)',
+    team: '⚽ Manchester United',
+  },
+  {
+    id: 2,
+    title: 'La Liga Española',
+    description: 'Camisetas auténticas de la liga más competitiva',
+    bg: 'linear-gradient(135deg, #FFC400 0%, #FF6B00 100%)',
+    team: '⚽ Real Madrid & Barcelona',
+  },
+  {
+    id: 3,
+    title: 'Bundesliga Alemana',
+    description: 'Potencia y calidad en cada diseño',
+    bg: 'linear-gradient(135deg, #000000 0%, #333333 100%)',
+    team: '⚽ Bayern Munich',
+  },
+  {
+    id: 4,
+    title: 'Serie A Italiana',
+    description: 'Elegancia y tradición futbolística',
+    bg: 'linear-gradient(135deg, #0066FF 0%, #003D99 100%)',
+    team: '⚽ Juventus & Inter',
+  },
+  {
+    id: 5,
+    title: 'Ligue 1 Francesa',
+    description: 'El talento y la pasión francesa',
+    bg: 'linear-gradient(135deg, #004687 0%, #0066BB 100%)',
+    team: '⚽ Paris Saint-Germain',
+  },
+];
+
 export default function Home({ products, navigateTo, onViewDetails, addToCart }) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length);
+
   return (
     <>
       <header className="relative min-h-screen flex items-start justify-start px-5 md:px-20 overflow-hidden">
@@ -50,6 +101,75 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart })
           </div>
         </div>
       </header>
+
+      {/* ===== CARRUSEL FUTBOLERO ===== */}
+      <section className="relative w-full overflow-hidden bg-black py-16 md:py-24">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="relative">
+            {/* Slide actual */}
+            <div
+              className="relative rounded-none overflow-hidden h-[300px] md:h-[400px] transition-all duration-500"
+              style={{ background: CAROUSEL_SLIDES[currentSlide].bg }}
+            >
+              {/* Contenido */}
+              <div className="absolute inset-0 flex flex-col justify-center items-start p-8 md:p-16 z-10">
+                <div className="max-w-2xl">
+                  <p className="text-[#22c55e] font-black text-sm md:text-base uppercase tracking-[0.1em] mb-4">
+                    {CAROUSEL_SLIDES[currentSlide].team}
+                  </p>
+                  <h2 className="font-black text-3xl md:text-5xl uppercase tracking-tight text-white mb-4 leading-[1.1]">
+                    {CAROUSEL_SLIDES[currentSlide].title}
+                  </h2>
+                  <p className="text-white/80 text-base md:text-lg font-medium mb-8 max-w-xl">
+                    {CAROUSEL_SLIDES[currentSlide].description}
+                  </p>
+                  <button
+                    onClick={() => navigateTo('productos')}
+                    className="bg-[#22c55e] text-black font-black px-8 py-3 rounded-none hover:bg-[#1fa75d] transition-all uppercase text-sm tracking-[0.08em] shadow-lg"
+                  >
+                    Explorar ahora
+                  </button>
+                </div>
+              </div>
+
+              {/* Overlay gradiente */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent z-0"></div>
+            </div>
+
+            {/* Botones navegación */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 p-2 rounded-none transition backdrop-blur-sm"
+              aria-label="Anterior"
+            >
+              <ChevronLeft size={24} className="text-white" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 p-2 rounded-none transition backdrop-blur-sm"
+              aria-label="Siguiente"
+            >
+              <ChevronRight size={24} className="text-white" />
+            </button>
+
+            {/* Indicadores */}
+            <div className="flex gap-2 justify-center mt-6">
+              {CAROUSEL_SLIDES.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`rounded-none transition-all h-2 ${
+                    idx === currentSlide
+                      ? 'bg-[#22c55e] w-8'
+                      : 'bg-gray-600 w-2 hover:bg-gray-500'
+                  }`}
+                  aria-label={`Ir a slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="bg-white text-black py-20 px-10">
         <div className="text-center mb-12">
