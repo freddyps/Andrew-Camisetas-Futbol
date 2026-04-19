@@ -5,9 +5,10 @@ import { createClient } from '@supabase/supabase-js'
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Supabase no está configurado. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env y reinicia el servidor de Vite.'
+// Solo mostrar advertencia en desarrollo si faltan las variables
+if (import.meta.env.DEV && (!supabaseUrl || !supabaseAnonKey)) {
+  console.warn(
+    '⚠️ Supabase no está configurado correctamente. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env y reinicia el servidor de Vite.'
   )
 }
 
