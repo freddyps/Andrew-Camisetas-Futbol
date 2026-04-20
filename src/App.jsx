@@ -21,11 +21,7 @@ function App() {
     const hash = window.location.hash.slice(1);
 
     if (hash.startsWith('producto/')) {
-      const id = Number(hash.split('/')[1]);
-      const product = allProducts.find((item) => item.id === id);
-      if (product) {
-        return { page: 'detalle', product };
-      }
+      return { page: 'detalle', product: null };
     }
 
     if (hash === 'productos') return { page: 'productos', product: null };
@@ -169,51 +165,6 @@ function App() {
     navigateTo('home');
   };
 
-  const handleHashChange = () => {
-    const hash = window.location.hash.slice(1);
-    if (hash.startsWith('producto/')) {
-      const id = Number(hash.split('/')[1]);
-      const product = allProducts.find((item) => item.id === id);
-      if (product) {
-        setSelectedProduct(product);
-        setPagina('detalle');
-        return;
-      }
-    }
-    if (hash === 'productos') {
-      setSelectedProduct(null);
-      setPagina('productos');
-      return;
-    }
-    if (hash === 'checkout') {
-      setSelectedProduct(null);
-      setPagina('checkout');
-      return;
-    }
-    if (hash === 'buscar') {
-      setSelectedProduct(null);
-      setPagina('buscar');
-      return;
-    }
-    if (hash === 'perfil') {
-      setSelectedProduct(null);
-      setPagina('perfil');
-      return;
-    }
-    if (hash === 'nosotros') {
-      setSelectedProduct(null);
-      setPagina('nosotros');
-      return;
-    }
-    if (hash === 'registro') {
-      setSelectedProduct(null);
-      setPagina('registro');
-      return;
-    }
-    setSelectedProduct(null);
-    setPagina('home');
-  };
-
   const openProductDetail = (product) => {
     window.location.hash = `producto/${product.id}`;
   };
@@ -237,34 +188,164 @@ function App() {
   };
 
   useEffect(() => {
-    const onHashChange = () => handleHashChange();
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash.startsWith('producto/')) {
+        const id = Number(hash.split('/')[1]);
+        const product = products.find((item) => item.id === id);
+        if (product) {
+          setSelectedProduct(product);
+          setPagina('detalle');
+          return;
+        }
+      }
+      if (hash === 'productos') {
+        setSelectedProduct(null);
+        setPagina('productos');
+        return;
+      }
+      if (hash === 'checkout') {
+        setSelectedProduct(null);
+        setPagina('checkout');
+        return;
+      }
+      if (hash === 'buscar') {
+        setSelectedProduct(null);
+        setPagina('buscar');
+        return;
+      }
+      if (hash === 'perfil') {
+        setSelectedProduct(null);
+        setPagina('perfil');
+        return;
+      }
+      if (hash === 'nosotros') {
+        setSelectedProduct(null);
+        setPagina('nosotros');
+        return;
+      }
+      if (hash === 'registro') {
+        setSelectedProduct(null);
+        setPagina('registro');
+        return;
+      }
+      setSelectedProduct(null);
+      setPagina('home');
+    };
+
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
+  }, [products]);
 
   useEffect(() => {
+    const normalizeMediaUrl = (value) => {
+      if (!value) return 'https://via.placeholder.com/400?text=Camiseta';
+      if (typeof value !== 'string') return 'https://via.placeholder.com/400?text=Camiseta';
+      if (value.startsWith('http')) return value;
+      if (value.startsWith('/')) return `${djangoApiBaseUrl.replace(/\/$/, '')}${value}`;
+      return value;
+    };
+
+    const normalizeProduct = (raw) => {
+      const imageUrl = normalizeMediaUrl(raw.image || raw.imagen || raw.photo || raw.thumbnail);
+      const galleryImages = raw.gallery || raw.images || [imageUrl];
+
+      return {
+        id: raw.id,
+        equipo: raw.equipo || raw.nombre || raw.name || `Producto ${raw.id}`,
+        liga: raw.liga || raw.league || 'General',
+        categoria: raw.categoria || raw.category || 'Camiseta',
+        precio: Number(raw.precio ?? raw.price ?? 0),
+        image: imageUrl,
+        gallery: Array.isArray(galleryImages)
+          ? galleryImages.map(normalizeMediaUrl)
+          : [normalizeMediaUrl(galleryImages)],
+        description: raw.descripcion || raw.description || '',
+        details: raw.details || {
+          corte: 'Regular',
+          peso: '200g',
+          tecnologia: 'Dry-Fit',
+          origen: 'Perú',
+        },
+        stock: raw.stock ?? 0,
+        descripcion: raw.descripcion || raw.description || '',
+      };
+    };
+
+    const normalizeProducts = (items) => (Array.isArray(items) ? items.map(normalizeProduct) : []);
+
+    const djangoApiBaseUrl = import.meta.env.VITE_DJANGO_API_BASE_URL || 'http://127.0.0.1:8000';
+    const djangoApiUrl = `${djangoApiBaseUrl.replace(/\/$/, '')}/api`;
+
     const fetchProducts = async () => {
       const cachedProducts = getCache('products');
       if (cachedProducts && cachedProducts.length) {
         setProducts(cachedProducts);
-        return;
       }
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        setProducts(allProducts);
-        return;
-      }
+      let loaded = false;
 
       try {
-        const { data, error } = await supabase.from('products').select('*');
-        if (!error && data && data.length) {
-          setProducts(data);
-          setCache('products', data, 60 * 60 * 12);
-        } else {
-          setProducts(allProducts);
+        const response = await fetch(`${djangoApiUrl}/camisetas/`);
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length) {
+            const normalized = normalizeProducts(data);
+            setProducts(normalized);
+            setCache('products', normalized, 60 * 60 * 12);
+            loaded = true;
+            const currentHash = window.location.hash.slice(1);
+            if (currentHash.startsWith('producto/')) {
+              const id = Number(currentHash.split('/')[1]);
+              const product = normalized.find((item) => item.id === id);
+              if (product) {
+                setSelectedProduct(product);
+                setPagina('detalle');
+              }
+            }
+          }
         }
-      } catch {
-        setProducts(allProducts);
+      } catch (error) {
+        console.warn('No se pudo cargar productos desde Django:', error);
+      }
+
+      if (!loaded) {
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            const { data, error } = await supabase.from('products').select('*');
+            if (!error && data && data.length) {
+              const normalized = normalizeProducts(data);
+              setProducts(normalized);
+              setCache('products', normalized, 60 * 60 * 12);
+              loaded = true;
+              const currentHash = window.location.hash.slice(1);
+              if (currentHash.startsWith('producto/')) {
+                const id = Number(currentHash.split('/')[1]);
+                const product = normalized.find((item) => item.id === id);
+                if (product) {
+                  setSelectedProduct(product);
+                  setPagina('detalle');
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('No se pudo cargar productos desde Supabase:', error);
+          }
+        }
+      }
+
+      if (!loaded && (!cachedProducts || !cachedProducts.length)) {
+        const normalized = normalizeProducts(allProducts);
+        setProducts(normalized);
+        const currentHash = window.location.hash.slice(1);
+        if (currentHash.startsWith('producto/')) {
+          const id = Number(currentHash.split('/')[1]);
+          const product = normalized.find((item) => item.id === id);
+          if (product) {
+            setSelectedProduct(product);
+            setPagina('detalle');
+          }
+        }
       }
     };
 

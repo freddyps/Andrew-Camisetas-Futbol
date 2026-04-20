@@ -1,7 +1,6 @@
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
-import heroImage from '../assets/hero.png';
 
 const CAROUSEL_SLIDES = [
   {
