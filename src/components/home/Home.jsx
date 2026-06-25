@@ -8,6 +8,7 @@ const CAROUSEL_SLIDES = [
     title: 'Colección Premier League',
     description: 'La cuna del fútbol rápido y físico. Camisetas de los clubes más grandes de Inglaterra con calidad premium garantizada.',
     bg: 'linear-gradient(135deg, #3d195b 0%, #17002c 100%)',
+    image: '/premier_league_banner.png',
     team: '⚽ Manchester United & Arsenal',
     accentColor: '#3d195b'
   },
@@ -144,7 +145,17 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart, o
               className="absolute inset-0 flex flex-col justify-center items-start p-8 md:p-16 z-10 transition-all duration-700"
               style={{ background: CAROUSEL_SLIDES[currentSlide].bg }}
             >
-              <div className="max-w-2xl animate-fade-in-up">
+              {CAROUSEL_SLIDES[currentSlide].image && (
+                <div className="absolute inset-0 z-0">
+                  <img
+                    src={CAROUSEL_SLIDES[currentSlide].image}
+                    className="w-full h-full object-cover object-[right_center] md:object-[right_30%] opacity-35 md:opacity-55 transition-all duration-500"
+                    alt="Colección"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
+                </div>
+              )}
+              <div className="max-w-2xl animate-fade-in-up relative z-10">
                 <span className="text-[#22c55e] font-display font-black text-xs uppercase tracking-[0.15em] glow-text-green bg-black/30 px-3 py-1.5 rounded-none">
                   {CAROUSEL_SLIDES[currentSlide].team}
                 </span>
