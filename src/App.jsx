@@ -2,18 +2,25 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
 import { getCache, setCache } from './utils/cache';
 import { AppProvider } from './context/AppContext';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Home from './components/Home';
-import ProductsPage from './components/ProductsPage';
-import ProductDetail from './components/ProductDetail';
-import CartDrawer from './components/CartDrawer';
-import Checkout from './components/Checkout';
-import SearchPage from './components/SearchPage';
-import UserProfile from './components/UserProfile';
-import Register from './components/Register';
-import About from './components/About';
-import SupportWidget from './components/SupportWidget';
+
+// Importaciones de Componentes Organizados y Separados
+import Navbar from './components/common/Navbar';
+import Footer from './components/common/Footer';
+import SupportWidget from './components/common/SupportWidget';
+import Toast from './components/common/Toast';
+import About from './components/common/About';
+import Home from './components/home/Home';
+import ProductsPage from './components/features/ProductsPage';
+import ProductDetail from './components/features/ProductDetail';
+import CartDrawer from './components/features/CartDrawer';
+import WishlistDrawer from './components/features/WishlistDrawer';
+import Checkout from './components/checkout/Checkout';
+import Register from './components/auth/Register';
+import UserProfile from './components/auth/UserProfile';
+import SearchPage from './components/features/SearchPage';
+import FAQ from './components/common/FAQ';
+import OrderTracker from './components/features/OrderTracker';
+
 import { products as allProducts } from './data/products';
 
 function App() {
@@ -30,6 +37,8 @@ function App() {
     if (hash === 'perfil') return { page: 'perfil', product: null };
     if (hash === 'nosotros') return { page: 'nosotros', product: null };
     if (hash === 'registro') return { page: 'registro', product: null };
+    if (hash === 'faq') return { page: 'faq', product: null };
+    if (hash === 'rastrear') return { page: 'rastrear', product: null };
 
     return { page: 'home', product: null };
   };
@@ -55,6 +64,15 @@ function App() {
     }
   }, []);
 
+  const getStoredWishlist = () => {
+    try {
+      const stored = window.localStorage.getItem('andrew_wishlist');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+
   const mergeCartItems = useCallback((baseItems, loadedItems) => {
     const merged = [...baseItems];
     loadedItems.forEach((item) => {
@@ -70,18 +88,84 @@ function App() {
 
   const initialRoute = parseHashState();
 
+  // ESTADOS GLOBALES DE LA APLICACIÓN
   const [pagina, setPagina] = useState(initialRoute.page);
   const [selectedProduct, setSelectedProduct] = useState(initialRoute.product);
   const [products, setProducts] = useState(() => getCache('products') || allProducts);
   const [user, setUser] = useState(getStoredUser);
+
+  // Modo Claro / Oscuro (Tema)
+  const [theme, setTheme] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem('andrew_theme');
+      return stored || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    try {
+      window.localStorage.setItem('andrew_theme', theme);
+    } catch {
+      // Silencioso
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+  
+  // Carrito de compras
   const [cartItems, setCartItems] = useState(() => getStoredCart(getStoredUser()));
   const [cartOpen, setCartOpen] = useState(false);
+  
+  // Lista de deseos (Wishlist/Favoritos)
+  const [wishlistItems, setWishlistItems] = useState(getStoredWishlist);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+
+  // Notificaciones flotantes (Toasts)
+  const [toast, setToast] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [leagueFilter, setLeagueFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const wishlistCount = wishlistItems.length;
 
+  // GESTOR DE NOTIFICACIONES TOAST
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const toggleCart = () => setCartOpen((open) => !open);
+  const toggleWishlist = () => setWishlistOpen((open) => !open);
+
+  // GESTOR DE LISTA DE DESEOS (FAVORITOS)
+  const handleToggleWishlist = (product) => {
+    setWishlistItems((prev) => {
+      const isFav = prev.some((item) => item.id === product.id);
+      let updated;
+      if (isFav) {
+        showToast(`Quitado de favoritos: Camiseta ${product.equipo}`, 'info');
+        updated = prev.filter((item) => item.id !== product.id);
+      } else {
+        showToast(`Añadido a favoritos: Camiseta ${product.equipo}`, 'success');
+        updated = [...prev, product];
+      }
+      window.localStorage.setItem('andrew_wishlist', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // GESTOR DEL CARRITO
   const addToCart = (product, options = {}) => {
     const {
       size = 'M',
@@ -91,6 +175,7 @@ function App() {
       personalizationNumber = '',
       addShort = false,
       price = product.precio,
+      quantity = 1,
     } = options;
 
     const itemKey = `${product.id}-${version}-${size}-${customName ? 'custom' : 'no'}-${personalizationName}-${personalizationNumber}-${addShort ? 'short' : 'noshort'}`;
@@ -98,11 +183,13 @@ function App() {
     setCartItems((prev) => {
       const existing = prev.find((cartItem) => cartItem.id === itemKey);
       if (existing) {
+        showToast(`Actualizada cantidad de ${product.equipo} en carrito`, 'success');
         return prev.map((cartItem) =>
-          cartItem.id === itemKey ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+          cartItem.id === itemKey ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem
         );
       }
 
+      showToast(`¡Añadido al carrito: ${product.equipo}!`, 'success');
       return [
         ...prev,
         {
@@ -117,7 +204,7 @@ function App() {
           personalizationNumber,
           addShort,
           price: Number(price),
-          quantity: 1,
+          quantity,
         },
       ];
     });
@@ -127,13 +214,13 @@ function App() {
 
   const removeCartItem = (itemId) => {
     setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+    showToast('Producto eliminado del carrito', 'info');
   };
 
   const clearCart = () => {
     setCartItems([]);
+    showToast('Bolsa de compra vaciada', 'info');
   };
-
-  const toggleCart = () => setCartOpen((open) => !open);
 
   const updateCartQuantity = (itemId, delta) => {
     setCartItems((prev) =>
@@ -155,14 +242,29 @@ function App() {
     setCartItems(mergedCart);
     window.localStorage.removeItem(getCartStorageKey(null));
 
+    showToast(`¡Bienvenido de nuevo, ${userData.name}!`, 'success');
     navigateTo('perfil');
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignorar fallos de cierre de sesión
+    }
     setUser(null);
     window.localStorage.removeItem('andrew_user');
+    showToast('Sesión cerrada correctamente', 'info');
     navigateTo('home');
+  };
+
+  const handleUpdateUser = (updatedData) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updatedData };
+      window.localStorage.setItem('andrew_user', JSON.stringify(next));
+      showToast('Datos de perfil actualizados', 'success');
+      return next;
+    });
   };
 
   const openProductDetail = (product) => {
@@ -182,6 +284,10 @@ function App() {
       window.location.hash = 'registro';
     } else if (page === 'nosotros') {
       window.location.hash = 'nosotros';
+    } else if (page === 'faq') {
+      window.location.hash = 'faq';
+    } else if (page === 'rastrear') {
+      window.location.hash = 'rastrear';
     } else {
       window.location.hash = 'home';
     }
@@ -229,6 +335,16 @@ function App() {
         setPagina('registro');
         return;
       }
+      if (hash === 'faq') {
+        setSelectedProduct(null);
+        setPagina('faq');
+        return;
+      }
+      if (hash === 'rastrear') {
+        setSelectedProduct(null);
+        setPagina('rastrear');
+        return;
+      }
       setSelectedProduct(null);
       setPagina('home');
     };
@@ -237,6 +353,7 @@ function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, [products]);
 
+  // CARGAR PRODUCTOS DESDE DJANGO API O SUPABASE CON RETROALIMENTACIÓN DE LOCAL CACHE
   useEffect(() => {
     const normalizeMediaUrl = (value) => {
       if (!value) return 'https://via.placeholder.com/400?text=Camiseta';
@@ -252,22 +369,22 @@ function App() {
 
       return {
         id: raw.id,
-        equipo: raw.equipo || raw.nombre || raw.name || `Producto ${raw.id}`,
-        liga: raw.liga || raw.league || 'General',
-        categoria: raw.categoria || raw.category || 'Camiseta',
-        precio: Number(raw.precio ?? raw.price ?? 0),
+        equipo: raw.equipo || raw.nombre || raw.name || `Camiseta ${raw.id}`,
+        liga: raw.liga || raw.league || 'Liga',
+        categoria: raw.categoria || raw.category || 'Local',
+        precio: Number(raw.precio ?? raw.price ?? 90.00),
         image: imageUrl,
         gallery: Array.isArray(galleryImages)
           ? galleryImages.map(normalizeMediaUrl)
           : [normalizeMediaUrl(galleryImages)],
-        description: raw.descripcion || raw.description || '',
+        description: raw.descripcion || raw.description || 'Camiseta de fútbol premium oficial.',
         details: raw.details || {
-          corte: 'Regular',
-          peso: '200g',
-          tecnologia: 'Dry-Fit',
-          origen: 'Perú',
+          corte: 'Regular Fit',
+          peso: '185g',
+          tecnologia: 'Dry-Fit Pro',
+          origen: 'Importado',
         },
-        stock: raw.stock ?? 0,
+        stock: raw.stock ?? 10,
         descripcion: raw.descripcion || raw.description || '',
       };
     };
@@ -294,58 +411,30 @@ function App() {
             setProducts(normalized);
             setCache('products', normalized, 60 * 60 * 12);
             loaded = true;
-            const currentHash = window.location.hash.slice(1);
-            if (currentHash.startsWith('producto/')) {
-              const id = Number(currentHash.split('/')[1]);
-              const product = normalized.find((item) => item.id === id);
-              if (product) {
-                setSelectedProduct(product);
-                setPagina('detalle');
-              }
-            }
           }
         }
       } catch (error) {
-        console.warn('No se pudo cargar productos desde Django:', error);
+        // Silencioso. Carga local/supabase
       }
 
-      if (!loaded) {
-        if (supabaseUrl && supabaseAnonKey) {
-          try {
-            const { data, error } = await supabase.from('products').select('*');
-            if (!error && data && data.length) {
-              const normalized = normalizeProducts(data);
-              setProducts(normalized);
-              setCache('products', normalized, 60 * 60 * 12);
-              loaded = true;
-              const currentHash = window.location.hash.slice(1);
-              if (currentHash.startsWith('producto/')) {
-                const id = Number(currentHash.split('/')[1]);
-                const product = normalized.find((item) => item.id === id);
-                if (product) {
-                  setSelectedProduct(product);
-                  setPagina('detalle');
-                }
-              }
-            }
-          } catch (error) {
-            console.warn('No se pudo cargar productos desde Supabase:', error);
+      if (!loaded && supabaseUrl && supabaseAnonKey) {
+        try {
+          const { data, error } = await supabase.from('products').select('*');
+          if (!error && data && data.length) {
+            const normalized = normalizeProducts(data);
+            setProducts(normalized);
+            setCache('products', normalized, 60 * 60 * 12);
+            loaded = true;
           }
+        } catch (error) {
+          // Silencioso
         }
       }
 
+      // Si no se cargó nada, nos aseguramos que el fallback esté sincronizado con el hash
       if (!loaded && (!cachedProducts || !cachedProducts.length)) {
         const normalized = normalizeProducts(allProducts);
         setProducts(normalized);
-        const currentHash = window.location.hash.slice(1);
-        if (currentHash.startsWith('producto/')) {
-          const id = Number(currentHash.split('/')[1]);
-          const product = normalized.find((item) => item.id === id);
-          if (product) {
-            setSelectedProduct(product);
-            setPagina('detalle');
-          }
-        }
       }
     };
 
@@ -356,7 +445,7 @@ function App() {
     try {
       window.localStorage.setItem(getCartStorageKey(user), JSON.stringify(cartItems));
     } catch {
-      // Ignorar fallos de almacenamiento.
+      // Silencioso
     }
   }, [cartItems, user]);
 
@@ -366,13 +455,11 @@ function App() {
     }
   }, [user]);
 
+  // Sesión de Supabase
   useEffect(() => {
     const loadSession = async () => {
       const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error cargando sesión de Supabase:', error.message);
-        return;
-      }
+      if (error) return;
 
       const session = data?.session;
       if (session?.user) {
@@ -384,11 +471,6 @@ function App() {
         };
         setUser(userData);
         setCartItems(getStoredCart(userData));
-        
-        // Limpia los parámetros de la URL después del login
-        if (window.location.hash.includes('access_token')) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
       }
     };
 
@@ -430,8 +512,7 @@ function App() {
       !query ||
       item.equipo.toLowerCase().includes(query) ||
       item.liga.toLowerCase().includes(query) ||
-      item.categoria.toLowerCase().includes(query) ||
-      item.precio.toString().includes(query);
+      item.categoria.toLowerCase().includes(query);
 
     const leagueMatch = leagueFilter === 'all' || item.liga === leagueFilter;
 
@@ -441,7 +522,9 @@ function App() {
       (priceFilter === '92-95' && item.precio >= 92 && item.precio <= 95) ||
       (priceFilter === 'over-95' && item.precio > 95);
 
-    return searchMatch && leagueMatch && priceMatch;
+    const categoryMatch = categoryFilter === 'all' || item.categoria.toLowerCase() === categoryFilter.toLowerCase();
+
+    return searchMatch && leagueMatch && priceMatch && categoryMatch;
   });
 
   return (
@@ -458,11 +541,28 @@ function App() {
         setUser,
       }}
     >
-      <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-[#22c55e] selection:text-black">
-        <Navbar pagina={pagina} navigateTo={navigateTo} cartCount={cartCount} toggleCart={toggleCart} />
+      <div className={`min-h-screen bg-[#050505] text-white font-sans selection:bg-[#22c55e] selection:text-black ${theme === 'light' ? 'light-theme' : ''}`}>
+        {/* Barra de Navegación Premium */}
+        <Navbar 
+          pagina={pagina} 
+          navigateTo={navigateTo} 
+          cartCount={cartCount} 
+          toggleCart={toggleCart} 
+          wishlistCount={wishlistCount}
+          toggleWishlist={toggleWishlist}
+          theme={theme}
+          toggleTheme={toggleTheme}
+        />
 
+        {/* Enrutador de Páginas */}
         {pagina === 'detalle' && selectedProduct ? (
-          <ProductDetail item={selectedProduct} onBack={closeProductDetail} onAddToCart={addToCart} />
+          <ProductDetail 
+            item={selectedProduct} 
+            onBack={closeProductDetail} 
+            onAddToCart={addToCart} 
+            wishlistItems={wishlistItems}
+            onToggleWishlist={handleToggleWishlist}
+          />
         ) : pagina === 'productos' ? (
           <ProductsPage
             products={products}
@@ -473,12 +573,31 @@ function App() {
             setLeagueFilter={setLeagueFilter}
             priceFilter={priceFilter}
             setPriceFilter={setPriceFilter}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
             onBack={() => navigateTo('home')}
             onViewDetails={openProductDetail}
             addToCart={addToCart}
+            wishlistItems={wishlistItems}
+            onToggleWishlist={handleToggleWishlist}
           />
         ) : pagina === 'checkout' ? (
-          <Checkout cartItems={cartItems} onBack={() => navigateTo('productos')} onClearCart={clearCart} />
+          !user ? (
+            <Register 
+              onBack={() => navigateTo('productos')} 
+              onLogin={(userData) => {
+                handleLogin(userData);
+                navigateTo('checkout');
+              }} 
+              messageOverride="Por seguridad de tu transacción, por favor inicia sesión o regístrate en Andrew Camisetas antes de realizar tu pago por Yape, Plin o Transferencia Bancaria."
+            />
+          ) : (
+            <Checkout 
+              cartItems={cartItems} 
+              onBack={() => navigateTo('productos')} 
+              onClearCart={clearCart} 
+            />
+          )
         ) : pagina === 'buscar' ? (
           <SearchPage
             products={products}
@@ -486,25 +605,51 @@ function App() {
             setSearchQuery={setSearchQuery}
             onBack={() => navigateTo('productos')}
             onViewDetails={openProductDetail}
+            addToCart={addToCart}
+            wishlistItems={wishlistItems}
+            onToggleWishlist={handleToggleWishlist}
           />
         ) : pagina === 'perfil' ? (
           user ? (
-            <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+            <UserProfile 
+              user={user} 
+              onBack={() => navigateTo('home')} 
+              onLogout={handleLogout} 
+              onUpdateUser={handleUpdateUser}
+            />
           ) : (
             <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
           )
         ) : pagina === 'registro' ? (
           user ? (
-            <UserProfile user={user} onBack={() => navigateTo('home')} onLogout={handleLogout} />
+            <UserProfile 
+              user={user} 
+              onBack={() => navigateTo('home')} 
+              onLogout={handleLogout} 
+              onUpdateUser={handleUpdateUser}
+            />
           ) : (
             <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
           )
         ) : pagina === 'nosotros' ? (
           <About onBack={() => navigateTo('home')} />
+        ) : pagina === 'faq' ? (
+          <FAQ onBack={() => navigateTo('home')} />
+        ) : pagina === 'rastrear' ? (
+          <OrderTracker onBack={() => navigateTo('home')} />
         ) : (
-          <Home products={products} navigateTo={navigateTo} onViewDetails={openProductDetail} addToCart={addToCart} />
+          <Home 
+            products={products} 
+            navigateTo={navigateTo} 
+            onViewDetails={openProductDetail} 
+            addToCart={addToCart} 
+            wishlistItems={wishlistItems}
+            onToggleWishlist={handleToggleWishlist}
+            theme={theme}
+          />
         )}
 
+        {/* Bolsa de Compra (Drawer) */}
         <CartDrawer
           open={cartOpen}
           onClose={() => setCartOpen(false)}
@@ -514,9 +659,31 @@ function App() {
           onDecrement={(id) => updateCartQuantity(id, -1)}
           onCheckout={() => navigateTo('checkout')}
         />
-        {/* Widget de soporte flotante - disponible en todas las páginas */}
+
+        {/* Lista de Deseos (Drawer) */}
+        <WishlistDrawer
+          open={wishlistOpen}
+          onClose={() => setWishlistOpen(false)}
+          wishlistItems={wishlistItems}
+          onRemove={handleToggleWishlist}
+          onAddToCart={addToCart}
+          onViewDetails={openProductDetail}
+        />
+
+        {/* Widget de Soporte Flotante */}
         <SupportWidget />
-        <Footer />
+
+        {/* Pie de Página */}
+        <Footer navigateTo={navigateTo} />
+
+        {/* Notificaciones Flotantes (Toasts) */}
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
       </div>
     </AppProvider>
   );

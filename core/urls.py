@@ -13,6 +13,7 @@ urlpatterns = [
     
     # 3. Tu API para React
     path('api/', include('productos.urls')),
+    path('api/', include('tienda.urls')),
 ] 
 
 # 4. Para que se vean las FOTOS que subas

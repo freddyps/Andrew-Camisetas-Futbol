@@ -10,3 +10,14 @@ class Camiseta(models.Model):
 
     def __str__(self):
         return self.nombre
+
+class Resena(models.Model):
+    camiseta = models.ForeignKey(Camiseta, related_name='resenas', on_delete=models.CASCADE)
+    nombre_cliente = models.CharField(max_length=100)
+    calificacion = models.PositiveIntegerField(default=5)  # 1-5 estrellas
+    comentario = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre_cliente} - {self.calificacion}* en {self.camiseta.nombre}"
+

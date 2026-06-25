@@ -30,6 +30,8 @@ ALLOWED_HOSTS = ['tu-app.onrender.com', 'localhost', '127.0.0.1']  # Agregar tu 
 
 # Application definition
 
+import dj_database_url
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',      # Framework para la API
     'corsheaders',         # Para conectar con React
     'productos',  # <--- AÑADE ESTO
-
+    'tienda',
 ]
 
 MIDDLEWARE = [
@@ -78,10 +80,10 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+    )
 }
 
 
@@ -137,3 +139,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Configuración opcional para ponerlo en español
 LANGUAGE_CODE = 'es-pe' 
 TIME_ZONE = 'America/Lima'
+
+# Configuración de notificaciones de WhatsApp
+WHATSAPP_ADMIN_NUMBER = os.environ.get('WHATSAPP_ADMIN_NUMBER', '+51934353097')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_WHATSAPP = os.environ.get('TWILIO_FROM_WHATSAPP', 'whatsapp:+14155238886')
