@@ -149,7 +149,7 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart, o
                 <div className="absolute inset-0 z-0">
                   <img
                     src={CAROUSEL_SLIDES[currentSlide].image}
-                    className="w-full h-full object-cover object-[right_center] md:object-[right_30%] opacity-35 md:opacity-55 transition-all duration-500"
+                    className="w-full h-full object-cover object-[right_top] opacity-35 md:opacity-55 transition-all duration-500"
                     alt="Colección"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
