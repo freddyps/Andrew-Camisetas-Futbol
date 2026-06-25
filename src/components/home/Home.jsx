@@ -30,8 +30,108 @@ const CAROUSEL_SLIDES = [
   }
 ];
 
+const WORLD_CUP_TEAMS = [
+  {
+    code: 'PE',
+    name: 'Perú',
+    flag: '🇵🇪',
+    primaryColor: '#ffffff',
+    secondaryColor: '#d91d1d',
+    textColor: '#eab308',
+    sash: true,
+    defaultName: 'GUERRERO',
+    defaultNumber: '9',
+    productId: 8,
+    description: 'La camiseta de nuestra selección con la clásica franja roja y detalles en dorado metálico. ¡Viste los colores de la hazaña!'
+  },
+  {
+    code: 'AR',
+    name: 'Argentina',
+    flag: '🇦🇷',
+    primaryColor: '#74acdf',
+    secondaryColor: '#ffffff',
+    textColor: '#eab308',
+    stripes: true,
+    defaultName: 'MESSI',
+    defaultNumber: '10',
+    productId: null,
+    description: 'La camiseta de los tres veces campeones mundiales. Luce las franjas celestes y blancas con el sol de mayo en el cuello.'
+  },
+  {
+    code: 'BR',
+    name: 'Brasil',
+    flag: '🇧🇷',
+    primaryColor: '#fedd00',
+    secondaryColor: '#009b3a',
+    textColor: '#009b3a',
+    defaultName: 'VINICIUS JR',
+    defaultNumber: '7',
+    productId: null,
+    description: 'El clásico verdeamarelo que representa el Jogo Bonito. Tela ultra liviana y cuello elástico de punto verde jacquard.'
+  },
+  {
+    code: 'MX',
+    name: 'México',
+    flag: '🇲🇽',
+    primaryColor: '#006341',
+    secondaryColor: '#ffffff',
+    textColor: '#d91d1d',
+    defaultName: 'SANTI G.',
+    defaultNumber: '9',
+    productId: null,
+    description: 'Inspirada en el plumaje del águila y el calendario azteca. Textura verde oliva profundo con detalles rojos oficiales.'
+  },
+  {
+    code: 'US',
+    name: 'USA',
+    flag: '🇺🇸',
+    primaryColor: '#ffffff',
+    secondaryColor: '#002868',
+    textColor: '#bf0a30',
+    sideStripes: true,
+    defaultName: 'PULISIC',
+    defaultNumber: '10',
+    productId: null,
+    description: 'Diseño limpio en blanco con paneles laterales en azul y detalles en rojo vibrante. Diseñada para los anfitriones del 2026.'
+  },
+  {
+    code: 'ES',
+    name: 'España',
+    flag: '🇪🇸',
+    primaryColor: '#c11b1b',
+    secondaryColor: '#ffd700',
+    textColor: '#ffd700',
+    defaultName: 'L. YAMAL',
+    defaultNumber: '17',
+    productId: null,
+    description: 'La Roja de Europa. Un rojo intenso y profundo con detalles amarillos vibrantes en hombros y cuello que representan el poderío ibérico.'
+  }
+];
+
 export default function Home({ products, navigateTo, onViewDetails, addToCart, onToggleWishlist, wishlistItems, theme }) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedTeam, setSelectedTeam] = useState('PE');
+  const [dorsalName, setDorsalName] = useState('GUERRERO');
+  const [dorsalNumber, setDorsalNumber] = useState('9');
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [orderStatus, setOrderStatus] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+
+  const handleMouseMove = (e) => {
+    const card = e.currentTarget;
+    const box = card.getBoundingClientRect();
+    const x = e.clientX - box.left - box.width / 2;
+    const y = e.clientY - box.top - box.height / 2;
+    const rotateX = -(y / (box.height / 2)) * 12;
+    const rotateY = (x / (box.width / 2)) * 12;
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
+
+  const currentTeamData = WORLD_CUP_TEAMS.find(t => t.code === selectedTeam) || WORLD_CUP_TEAMS[0];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -251,6 +351,272 @@ export default function Home({ products, navigateTo, onViewDetails, addToCart, o
             >
               Ver Todo el Catálogo <ArrowRight size={14} strokeWidth={2.5} />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== ZONA MUNDIALISTA 2026 (INTERACTIVE EXPERIENCE) ===== */}
+      <section className="relative py-24 px-6 md:px-12 overflow-hidden bg-black text-white">
+        {/* Background Image with Dark Overlays */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/mundial_2026_banner.png"
+            className="w-full h-full object-cover object-center opacity-30 select-none pointer-events-none"
+            alt="Mundial 2026"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-black/85 to-[#050505]"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60"></div>
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 via-white to-blue-600 p-[1.5px] mb-6 glow-blue-sm">
+              <span className="bg-black px-4 py-1.5 text-2xs font-black uppercase tracking-[0.2em] text-white">
+                🏆 UNITED 2026 EXPERIENCE
+              </span>
+            </div>
+            <h3 className="font-display font-black text-3xl sm:text-5xl md:text-6xl uppercase tracking-tight leading-none mb-4 text-white">
+              ZONA <span className="text-[#22c55e] glow-text-green">MUNDIALISTA 2026</span>
+            </h3>
+            <p className="text-gray-400 text-xs sm:text-sm font-semibold max-w-2xl mx-auto leading-relaxed">
+              El torneo más grande de la historia está aquí. Personaliza el dorsal oficial de tu selección favorita con nuestro simulador 3D interactivo en tiempo real y viste la gloria.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Column: Interactive Inputs and Team Selector */}
+            <div className="lg:col-span-7 bg-white/[0.01] border border-white/5 p-6 md:p-8 backdrop-blur-md">
+              <h4 className="font-display font-black text-lg sm:text-xl uppercase tracking-wider mb-6 text-white flex items-center gap-2">
+                <span>1.</span> Selecciona tu Selección
+              </h4>
+
+              {/* Country Selection Buttons */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
+                {WORLD_CUP_TEAMS.map((team) => (
+                  <button
+                    key={team.code}
+                    onClick={() => {
+                      setSelectedTeam(team.code);
+                      setDorsalName(team.defaultName);
+                      setDorsalNumber(team.defaultNumber);
+                      setOrderStatus('');
+                    }}
+                    className={`flex flex-col items-center justify-center p-3 border transition-all duration-300 cursor-pointer ${
+                      selectedTeam === team.code
+                        ? 'border-[#22c55e] bg-[#22c55e]/15 text-white font-bold scale-[1.03] shadow-md shadow-[#22c55e]/10'
+                        : 'border-white/10 bg-white/[0.02] hover:border-white/30 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-2xl mb-1 select-none">{team.flag}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider">{team.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <h4 className="font-display font-black text-lg sm:text-xl uppercase tracking-wider mb-6 text-white flex items-center gap-2">
+                <span>2.</span> Personaliza el Dorsal
+              </h4>
+
+              {/* Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">
+                    Nombre en Espalda
+                  </label>
+                  <input
+                    type="text"
+                    value={dorsalName}
+                    onChange={(e) => setDorsalName(e.target.value.toUpperCase().slice(0, 14))}
+                    placeholder="Escribe tu nombre"
+                    className="w-full bg-white/[0.03] border border-white/10 px-4 py-3 text-sm font-semibold tracking-wider text-white focus:border-[#22c55e] focus:outline-none transition-all rounded-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">
+                    Número
+                  </label>
+                  <input
+                    type="text"
+                    value={dorsalNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                      setDorsalNumber(val);
+                    }}
+                    placeholder="99"
+                    className="w-full bg-white/[0.03] border border-white/10 px-4 py-3 text-sm font-semibold tracking-wider text-white focus:border-[#22c55e] focus:outline-none transition-all rounded-none"
+                  />
+                </div>
+              </div>
+
+              {/* Action Banner */}
+              <div className="border border-white/5 bg-white/[0.01] p-6 rounded-none relative overflow-hidden">
+                <p className="text-xs font-bold text-gray-300 mb-6 leading-relaxed">
+                  {currentTeamData.description}
+                </p>
+
+                {selectedTeam === 'PE' ? (
+                  <div className="flex flex-col sm:flex-row gap-6 items-center justify-between mt-4">
+                    <div className="text-left w-full sm:w-auto">
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Precio Oficial</span>
+                      <span className="text-2xl font-display font-black text-[#22c55e] glow-text-green">S/ {currentTeamData.productId ? products.find(p => p.id === currentTeamData.productId)?.precio.toFixed(2) : '99.00'}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const prod = products.find(p => p.id === currentTeamData.productId);
+                        if (prod) onViewDetails(prod);
+                      }}
+                      className="w-full sm:w-auto bg-[#22c55e] hover:bg-[#1fa75d] text-black font-display font-black px-8 py-4 text-xs uppercase tracking-[0.1em] transition-all glow-green cursor-pointer flex items-center justify-center gap-2 btn-premium"
+                    >
+                      Comprar Camiseta Oficial <ArrowRight size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-black uppercase tracking-[0.1em] px-3 py-1.5 mb-4">
+                      ⚠️ Reserva Especial Mundialista
+                    </div>
+                    <p className="text-[11px] text-gray-400 mb-4 font-medium leading-relaxed">
+                      El stock de esta selección estará disponible pronto. Déjanos tu correo y sé el primero en enterarte con un **10% de descuento** exclusivo para tu compra.
+                    </p>
+                    
+                    {orderStatus === 'subscribed' ? (
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-[0.1em] p-4 text-center">
+                        🎉 ¡Suscrito con éxito! Te enviaremos una alerta cuando esté disponible.
+                      </div>
+                    ) : (
+                      <form 
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!emailInput) return;
+                          setOrderStatus('subscribing');
+                          try {
+                            await fetch('/api/newsletter/', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: emailInput })
+                            });
+                            setOrderStatus('subscribed');
+                          } catch (err) {
+                            setOrderStatus('subscribed'); // Safe fallback if offline
+                          }
+                        }}
+                        className="flex flex-col sm:flex-row gap-3"
+                      >
+                        <input
+                          type="email"
+                          required
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          placeholder="Introduce tu correo electrónico"
+                          className="flex-1 bg-white/[0.03] border border-white/10 px-4 py-3 text-xs font-semibold focus:border-[#22c55e] focus:outline-none transition-all text-white rounded-none"
+                        />
+                        <button
+                          type="submit"
+                          disabled={orderStatus === 'subscribing'}
+                          className="bg-white hover:bg-[#22c55e] hover:text-black text-black font-display font-black px-6 py-3 text-xs uppercase tracking-[0.1em] transition duration-300 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          {orderStatus === 'subscribing' ? 'Reservando...' : 'Reservar Cupo'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: 3D Preview Card */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center gap-6">
+              <div 
+                className="text-gray-500 text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2 select-none"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-ping"></span>
+                VISTA PREVIA INTERACTIVA 3D
+              </div>
+
+              {/* Jersey Back 3D-Tilt Card */}
+              <div
+                className="relative w-full max-w-[290px] h-[380px] bg-[#0c0c0c] rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 transition-all duration-300 ease-out"
+                style={{
+                  transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+                  transformStyle: 'preserve-3d',
+                }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                {/* Team-Specific Background Texture (CSS representation of the jersey back) */}
+                <div 
+                  className="absolute inset-0 z-0 transition-all duration-500"
+                  style={{
+                    backgroundColor: currentTeamData.primaryColor,
+                    backgroundImage: currentTeamData.stripes 
+                      ? `linear-gradient(90deg, ${currentTeamData.primaryColor} 0%, ${currentTeamData.primaryColor} 20%, ${currentTeamData.secondaryColor} 20%, ${currentTeamData.secondaryColor} 40%, ${currentTeamData.primaryColor} 40%, ${currentTeamData.primaryColor} 60%, ${currentTeamData.secondaryColor} 60%, ${currentTeamData.secondaryColor} 80%, ${currentTeamData.primaryColor} 80%)`
+                      : 'none'
+                  }}
+                >
+                  {/* Peruvian Diagonal Sash */}
+                  {currentTeamData.sash && (
+                    <div 
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(135deg, transparent 35%, ${currentTeamData.secondaryColor} 35%, ${currentTeamData.secondaryColor} 55%, transparent 55%)`
+                      }}
+                    ></div>
+                  )}
+
+                  {/* USA Side Stripes */}
+                  {currentTeamData.sideStripes && (
+                    <>
+                      <div className="absolute left-0 top-0 bottom-0 w-3 bg-[#002868]"></div>
+                      <div className="absolute right-0 top-0 bottom-0 w-3 bg-[#002868]"></div>
+                    </>
+                  )}
+
+                  {/* Jersey collar accent */}
+                  <div 
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 rounded-b-full z-10"
+                    style={{ backgroundColor: currentTeamData.secondaryColor }}
+                  ></div>
+                </div>
+
+                {/* Ambient shadows */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 z-10 pointer-events-none"></div>
+
+                {/* Live Dorsal text (Preserve-3d layered on top) */}
+                <div 
+                  className="w-full flex flex-col items-center justify-center mt-12 z-20 transition-all"
+                  style={{ transform: 'translateZ(40px)' }}
+                >
+                  {/* Player Name */}
+                  <h4 
+                    className="font-display font-black text-lg sm:text-xl uppercase tracking-widest mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] select-none text-center px-4 overflow-hidden text-ellipsis whitespace-nowrap w-full"
+                    style={{ color: currentTeamData.textColor }}
+                  >
+                    {dorsalName || 'TU NOMBRE'}
+                  </h4>
+                  
+                  {/* Player Number */}
+                  <span 
+                    className="font-display font-black text-8xl leading-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] select-none"
+                    style={{ color: currentTeamData.textColor }}
+                  >
+                    {dorsalNumber || '10'}
+                  </span>
+                </div>
+
+                {/* Badge overlay at the bottom */}
+                <div 
+                  className="z-20 bg-black/80 backdrop-blur-md px-4 py-1.5 border border-white/10 text-[9px] font-black tracking-widest text-white uppercase rounded-none select-none"
+                  style={{ transform: 'translateZ(25px)' }}
+                >
+                  {currentTeamData.flag} {currentTeamData.name} - 2026
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider text-center max-w-[280px]">
+                Mueve el mouse sobre la camiseta para ver el efecto de inclinación 3D en tiempo real.
+              </p>
+            </div>
           </div>
         </div>
       </section>
