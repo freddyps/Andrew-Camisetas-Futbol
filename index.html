@@ -9,6 +9,10 @@
     <meta name="description" content="Descubre la colección más exclusiva de camisetas de fútbol de la temporada 2025/26. Calidad de jugador premium, estampados personalizados en tiempo real y envío express. ¡Viste tu pasión!" />
     <meta name="keywords" content="camisetas de fútbol, camisetas personalizadas, Real Madrid, Barcelona, Selección Peruana, camisetas importadas, Yape, Plin, Andrew Camisetas" />
     <meta name="author" content="Andrew Camisetas SAC" />
+
+    <!-- Ciberseguridad: Headers & Políticas de Protección del Cliente -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     
     <!-- Open Graph (Redes Sociales) -->
     <meta property="og:title" content="ANDREW | Camisetas de Fútbol Premium" />
@@ -16,15 +20,35 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://andrewcamisetas.com" />
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Inter, Outfit, Montserrat (premium deportiva) y Barlow Condensed -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/jpeg" href="/logo_andrew_v2.jpg" />
+    <link rel="icon" type="image/webp" href="/brand/logo_andrew_v2.webp" />
+
+    <!-- Script Anti-Flash de Tema Instantáneo (Zero Delay) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('andrew_theme');
+          var isLight = saved === 'light';
+          var root = document.documentElement;
+          if (isLight) {
+            root.classList.add('light-theme');
+            root.classList.remove('dark');
+            root.classList.remove('dark-theme');
+          } else {
+            root.classList.add('dark');
+            root.classList.add('dark-theme');
+            root.classList.remove('light-theme');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#050505] text-white overflow-x-hidden">
+  <body class="overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

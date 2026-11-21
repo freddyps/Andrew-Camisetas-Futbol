@@ -1,692 +1,453 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
-import { getCache, setCache } from './utils/cache';
-import { AppProvider } from './context/AppContext';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
+import HomePage from './pages/home/HomePage';
+import CartDrawer from './components/cart/CartDrawer';
+import WhatsAppFloatingWidget from './components/common/WhatsAppFloatingWidget';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider, useToast } from './context/ToastContext';
+import { CartProvider, useCart } from './context/CartContext';
+import { supabase } from './supabaseClient';
+import { isAuthorizedAdminEmail } from './utils/security';
+import { getProductos, isSupabaseProductosOffline, resetProductosSyncCooldown } from './services/productService';
 
-// Importaciones de Componentes Organizados y Separados
-import Navbar from './components/common/Navbar';
-import Footer from './components/common/Footer';
-import SupportWidget from './components/common/SupportWidget';
-import Toast from './components/common/Toast';
-import About from './components/common/About';
-import Home from './components/home/Home';
-import ProductsPage from './components/features/ProductsPage';
-import ProductDetail from './components/features/ProductDetail';
-import CartDrawer from './components/features/CartDrawer';
-import WishlistDrawer from './components/features/WishlistDrawer';
-import Checkout from './components/checkout/Checkout';
-import Register from './components/auth/Register';
-import UserProfile from './components/auth/UserProfile';
-import SearchPage from './components/features/SearchPage';
-import FAQ from './components/common/FAQ';
-import OrderTracker from './components/features/OrderTracker';
+// Lazy loading para división de código (Code-Splitting) en producción
+const CatalogoPage = lazy(() => import('./pages/catalogo/CatalogoPage'));
+const ProductDetailsPage = lazy(() => import('./pages/producto/ProductDetailsPage'));
+const PedirAMedidaPage = lazy(() => import('./pages/pedir-a-medida/PedirAMedidaPage'));
+const NosotrosPage = lazy(() => import('./pages/nosotros/NosotrosPage'));
+const AdminPanelPage = lazy(() => import('./pages/admin/AdminPanelPage'));
+const CheckoutStepByStepPage = lazy(() => import('./pages/checkout/CheckoutStepByStepPage'));
+const MisPedidosPage = lazy(() => import('./pages/pedidos/MisPedidosPage'));
+const AuthPage = lazy(() => import('./pages/auth/AuthPage'));
+const InfoPoliciesPage = lazy(() => import('./pages/info/InfoPoliciesPage'));
 
-import { products as allProducts } from './data/products';
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 space-y-4">
+      <div className="w-12 h-12 border-4 border-[#22c55e]/20 border-t-[#22c55e] rounded-full animate-spin" />
+      <span className="text-xs uppercase tracking-widest text-gray-400 font-bold">Cargando Andrew Camisetas...</span>
+    </div>
+  );
+}
 
-function App() {
-  const parseHashState = () => {
-    const hash = window.location.hash.slice(1);
+function AppContent() {
+  const { addToast } = useToast();
+  const { 
+    cart, 
+    isCartOpen, 
+    setIsCartOpen, 
+    addToCart, 
+    updateQuantity, 
+    removeItem, 
+    clearCart,
+    cartCount 
+  } = useCart();
 
-    if (hash.startsWith('producto/')) {
-      return { page: 'detalle', product: null };
-    }
-
-    if (hash === 'productos') return { page: 'productos', product: null };
-    if (hash === 'checkout') return { page: 'checkout', product: null };
-    if (hash === 'buscar') return { page: 'buscar', product: null };
-    if (hash === 'perfil') return { page: 'perfil', product: null };
-    if (hash === 'nosotros') return { page: 'nosotros', product: null };
-    if (hash === 'registro') return { page: 'registro', product: null };
-    if (hash === 'faq') return { page: 'faq', product: null };
-    if (hash === 'rastrear') return { page: 'rastrear', product: null };
-
-    return { page: 'home', product: null };
-  };
-
-  const getStoredUser = () => {
+  const [currentRoute, setCurrentRoute] = useState(() => {
     try {
-      const stored = window.localStorage.getItem('andrew_user');
-      return stored ? JSON.parse(stored) : null;
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash.startsWith('producto-')) return 'producto-detalle';
+      const rutasValidas = ['inicio', 'catalogo', 'nosotros', 'pedir_a_medida', 'mis_pedidos', 'checkout', 'auth', 'admin', 'faq', 'terminos'];
+      if (rutasValidas.includes(hash)) return hash;
+      const saved = sessionStorage.getItem('andrew_current_route');
+      return saved || 'inicio';
+    } catch {
+      return 'inicio';
+    }
+  });
+  const [selectedProductId, setSelectedProductId] = useState(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash.startsWith('producto-')) return hash.replace('producto-', '');
+      return sessionStorage.getItem('andrew_selected_product_id') || 'peru-2025';
+    } catch {
+      return 'peru-2025';
+    }
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [servidorOffline, setServidorOffline] = useState(() => isSupabaseProductosOffline());
+
+  // Escuchar estado de conectividad con Supabase para mostrar aviso recuperable sin bloquear la tienda
+  useEffect(() => {
+    const handleNetStatus = (e) => {
+      setServidorOffline(Boolean(e?.detail?.offline));
+    };
+    window.addEventListener('andrew_network_status', handleNetStatus);
+    return () => window.removeEventListener('andrew_network_status', handleNetStatus);
+  }, []);
+  
+  // Modales flotantes y redirección post-login
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register' | 'pedidos'
+  const [postLoginRoute, setPostLoginRoute] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = sessionStorage.getItem('andrew_session_user');
+      if (!savedUser) return null;
+      const parsed = JSON.parse(savedUser);
+      // Mitigación contra escalación de privilegios en sessionStorage:
+      // El rol ADMIN solo se otorga si el correo autenticado pertenece a ADMIN_EMAILS_AUTORIZADOS
+      const verifiedRole = isAuthorizedAdminEmail(parsed?.email) ? 'ADMIN' : 'CLIENTE';
+      return { ...parsed, role: verifiedRole };
     } catch {
       return null;
     }
-  };
-
-  const getCartStorageKey = (currentUser) =>
-    currentUser?.email ? `andrew_cart_${currentUser.email}` : 'andrew_cart_guest';
-
-  const getStoredCart = useCallback((currentUser) => {
-    try {
-      const stored = window.localStorage.getItem(getCartStorageKey(currentUser));
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
-  const getStoredWishlist = () => {
-    try {
-      const stored = window.localStorage.getItem('andrew_wishlist');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const mergeCartItems = useCallback((baseItems, loadedItems) => {
-    const merged = [...baseItems];
-    loadedItems.forEach((item) => {
-      const existing = merged.find((cartItem) => cartItem.id === item.id);
-      if (existing) {
-        existing.quantity = Math.max(existing.quantity, item.quantity);
-      } else {
-        merged.push(item);
-      }
-    });
-    return merged;
-  }, []);
-
-  const initialRoute = parseHashState();
-
-  // ESTADOS GLOBALES DE LA APLICACIÓN
-  const [pagina, setPagina] = useState(initialRoute.page);
-  const [selectedProduct, setSelectedProduct] = useState(initialRoute.product);
-  const [products, setProducts] = useState(() => getCache('products') || allProducts);
-  const [user, setUser] = useState(getStoredUser);
-
-  // Modo Claro / Oscuro (Tema)
-  const [theme, setTheme] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem('andrew_theme');
-      return stored || 'dark';
-    } catch {
-      return 'dark';
-    }
   });
 
+  // Sincronizar ruta y producto activo con sessionStorage e historial del navegador
+  // Si el usuario tiene rol ADMIN, su entorno exclusivo es el Panel de Administración ('admin')
   useEffect(() => {
-    if (theme === 'light') {
-      document.body.classList.add('light-theme');
-    } else {
-      document.body.classList.remove('light-theme');
+    if (user?.role === 'ADMIN' && currentRoute !== 'admin') {
+      setCurrentRoute('admin');
+      setIsCartOpen(false);
+      return;
     }
     try {
-      window.localStorage.setItem('andrew_theme', theme);
+      sessionStorage.setItem('andrew_current_route', currentRoute);
+      sessionStorage.setItem('andrew_selected_product_id', selectedProductId);
     } catch {
-      // Silencioso
+      // ignore storage errors
     }
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-  
-  // Carrito de compras
-  const [cartItems, setCartItems] = useState(() => getStoredCart(getStoredUser()));
-  const [cartOpen, setCartOpen] = useState(false);
-  
-  // Lista de deseos (Wishlist/Favoritos)
-  const [wishlistItems, setWishlistItems] = useState(getStoredWishlist);
-  const [wishlistOpen, setWishlistOpen] = useState(false);
-
-  // Notificaciones flotantes (Toasts)
-  const [toast, setToast] = useState(null);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [leagueFilter, setLeagueFilter] = useState('all');
-  const [priceFilter, setPriceFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-
-  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-  const wishlistCount = wishlistItems.length;
-
-  // GESTOR DE NOTIFICACIONES TOAST
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-  };
-
-  const toggleCart = () => setCartOpen((open) => !open);
-  const toggleWishlist = () => setWishlistOpen((open) => !open);
-
-  // GESTOR DE LISTA DE DESEOS (FAVORITOS)
-  const handleToggleWishlist = (product) => {
-    setWishlistItems((prev) => {
-      const isFav = prev.some((item) => item.id === product.id);
-      let updated;
-      if (isFav) {
-        showToast(`Quitado de favoritos: Camiseta ${product.equipo}`, 'info');
-        updated = prev.filter((item) => item.id !== product.id);
-      } else {
-        showToast(`Añadido a favoritos: Camiseta ${product.equipo}`, 'success');
-        updated = [...prev, product];
-      }
-      window.localStorage.setItem('andrew_wishlist', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  // GESTOR DEL CARRITO
-  const addToCart = (product, options = {}) => {
-    const {
-      size = 'M',
-      version = 'fan',
-      customName = false,
-      personalizationName = '',
-      personalizationNumber = '',
-      addShort = false,
-      price = product.precio,
-      quantity = 1,
-    } = options;
-
-    const itemKey = `${product.id}-${version}-${size}-${customName ? 'custom' : 'no'}-${personalizationName}-${personalizationNumber}-${addShort ? 'short' : 'noshort'}`;
-
-    setCartItems((prev) => {
-      const existing = prev.find((cartItem) => cartItem.id === itemKey);
-      if (existing) {
-        showToast(`Actualizada cantidad de ${product.equipo} en carrito`, 'success');
-        return prev.map((cartItem) =>
-          cartItem.id === itemKey ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem
-        );
-      }
-
-      showToast(`¡Añadido al carrito: ${product.equipo}!`, 'success');
-      return [
-        ...prev,
-        {
-          id: itemKey,
-          productId: product.id,
-          name: product.equipo,
-          image: product.image,
-          size,
-          version,
-          customName,
-          personalizationName,
-          personalizationNumber,
-          addShort,
-          price: Number(price),
-          quantity,
-        },
-      ];
-    });
-
-    setCartOpen(true);
-  };
-
-  const removeCartItem = (itemId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
-    showToast('Producto eliminado del carrito', 'info');
-  };
-
-  const clearCart = () => {
-    setCartItems([]);
-    showToast('Bolsa de compra vaciada', 'info');
-  };
-
-  const updateCartQuantity = (itemId, delta) => {
-    setCartItems((prev) =>
-      prev
-        .map((item) =>
-          item.id === itemId ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  };
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    window.localStorage.setItem('andrew_user', JSON.stringify(userData));
-
-    const existingUserCart = getStoredCart(userData);
-    const guestCart = getStoredCart(null);
-    const mergedCart = mergeCartItems(guestCart, existingUserCart);
-    setCartItems(mergedCart);
-    window.localStorage.removeItem(getCartStorageKey(null));
-
-    showToast(`¡Bienvenido de nuevo, ${userData.name}!`, 'success');
-    navigateTo('perfil');
-  };
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // Ignorar fallos de cierre de sesión
-    }
-    setUser(null);
-    window.localStorage.removeItem('andrew_user');
-    showToast('Sesión cerrada correctamente', 'info');
-    navigateTo('home');
-  };
-
-  const handleUpdateUser = (updatedData) => {
-    setUser((prev) => {
-      const next = { ...prev, ...updatedData };
-      window.localStorage.setItem('andrew_user', JSON.stringify(next));
-      showToast('Datos de perfil actualizados', 'success');
-      return next;
-    });
-  };
-
-  const openProductDetail = (product) => {
-    window.location.hash = `producto/${product.id}`;
-  };
-
-  const navigateTo = (page) => {
-    if (page === 'productos') {
-      window.location.hash = 'productos';
-    } else if (page === 'checkout') {
-      window.location.hash = 'checkout';
-    } else if (page === 'buscar') {
-      window.location.hash = 'buscar';
-    } else if (page === 'perfil') {
-      window.location.hash = 'perfil';
-    } else if (page === 'registro') {
-      window.location.hash = 'registro';
-    } else if (page === 'nosotros') {
-      window.location.hash = 'nosotros';
-    } else if (page === 'faq') {
-      window.location.hash = 'faq';
-    } else if (page === 'rastrear') {
-      window.location.hash = 'rastrear';
-    } else {
-      window.location.hash = 'home';
-    }
-  };
+  }, [user, currentRoute, selectedProductId, setIsCartOpen]);
 
   useEffect(() => {
-    const onHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash.startsWith('producto/')) {
-        const id = Number(hash.split('/')[1]);
-        const product = products.find((item) => item.id === id);
-        if (product) {
-          setSelectedProduct(product);
-          setPagina('detalle');
-          return;
+    const handlePopState = (e) => {
+      if (e.state?.route) {
+        setCurrentRoute(e.state.route);
+        if (e.state.productId) {
+          setSelectedProductId(e.state.productId);
         }
       }
-      if (hash === 'productos') {
-        setSelectedProduct(null);
-        setPagina('productos');
-        return;
-      }
-      if (hash === 'checkout') {
-        setSelectedProduct(null);
-        setPagina('checkout');
-        return;
-      }
-      if (hash === 'buscar') {
-        setSelectedProduct(null);
-        setPagina('buscar');
-        return;
-      }
-      if (hash === 'perfil') {
-        setSelectedProduct(null);
-        setPagina('perfil');
-        return;
-      }
-      if (hash === 'nosotros') {
-        setSelectedProduct(null);
-        setPagina('nosotros');
-        return;
-      }
-      if (hash === 'registro') {
-        setSelectedProduct(null);
-        setPagina('registro');
-        return;
-      }
-      if (hash === 'faq') {
-        setSelectedProduct(null);
-        setPagina('faq');
-        return;
-      }
-      if (hash === 'rastrear') {
-        setSelectedProduct(null);
-        setPagina('rastrear');
-        return;
-      }
-      setSelectedProduct(null);
-      setPagina('home');
     };
-
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [products]);
-
-  // CARGAR PRODUCTOS DESDE DJANGO API O SUPABASE CON RETROALIMENTACIÓN DE LOCAL CACHE
-  useEffect(() => {
-    const normalizeMediaUrl = (value) => {
-      if (!value) return 'https://via.placeholder.com/400?text=Camiseta';
-      if (typeof value !== 'string') return 'https://via.placeholder.com/400?text=Camiseta';
-      if (value.startsWith('http')) return value;
-      if (value.startsWith('/')) return `${djangoApiBaseUrl.replace(/\/$/, '')}${value}`;
-      return value;
-    };
-
-    const normalizeProduct = (raw) => {
-      const imageUrl = normalizeMediaUrl(raw.image || raw.imagen || raw.photo || raw.thumbnail);
-      const galleryImages = raw.gallery || raw.images || [imageUrl];
-
-      return {
-        id: raw.id,
-        equipo: raw.equipo || raw.nombre || raw.name || `Camiseta ${raw.id}`,
-        liga: raw.liga || raw.league || 'Liga',
-        categoria: raw.categoria || raw.category || 'Local',
-        precio: Number(raw.precio ?? raw.price ?? 90.00),
-        image: imageUrl,
-        gallery: Array.isArray(galleryImages)
-          ? galleryImages.map(normalizeMediaUrl)
-          : [normalizeMediaUrl(galleryImages)],
-        description: raw.descripcion || raw.description || 'Camiseta de fútbol premium oficial.',
-        details: raw.details || {
-          corte: 'Regular Fit',
-          peso: '185g',
-          tecnologia: 'Dry-Fit Pro',
-          origen: 'Importado',
-        },
-        stock: raw.stock ?? 10,
-        descripcion: raw.descripcion || raw.description || '',
-      };
-    };
-
-    const normalizeProducts = (items) => (Array.isArray(items) ? items.map(normalizeProduct) : []);
-
-    const djangoApiBaseUrl = import.meta.env.VITE_DJANGO_API_BASE_URL || 'http://127.0.0.1:8000';
-    const djangoApiUrl = `${djangoApiBaseUrl.replace(/\/$/, '')}/api`;
-
-    const fetchProducts = async () => {
-      const cachedProducts = getCache('products');
-      if (cachedProducts && cachedProducts.length) {
-        setProducts(cachedProducts);
-      }
-
-      let loaded = false;
-
-      try {
-        const response = await fetch(`${djangoApiUrl}/camisetas/`);
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data) && data.length) {
-            const normalized = normalizeProducts(data);
-            setProducts(normalized);
-            setCache('products', normalized, 60 * 60 * 12);
-            loaded = true;
-          }
-        }
-      } catch (error) {
-        // Silencioso. Carga local/supabase
-      }
-
-      if (!loaded && supabaseUrl && supabaseAnonKey) {
-        try {
-          const { data, error } = await supabase.from('products').select('*');
-          if (!error && data && data.length) {
-            const normalized = normalizeProducts(data);
-            setProducts(normalized);
-            setCache('products', normalized, 60 * 60 * 12);
-            loaded = true;
-          }
-        } catch (error) {
-          // Silencioso
-        }
-      }
-
-      // Si no se cargó nada, nos aseguramos que el fallback esté sincronizado con el hash
-      if (!loaded && (!cachedProducts || !cachedProducts.length)) {
-        const normalized = normalizeProducts(allProducts);
-        setProducts(normalized);
-      }
-    };
-
-    fetchProducts();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Escuchar sesión activa de Supabase al cargar la app
   useEffect(() => {
-    try {
-      window.localStorage.setItem(getCartStorageKey(user), JSON.stringify(cartItems));
-    } catch {
-      // Silencioso
-    }
-  }, [cartItems, user]);
-
-  useEffect(() => {
-    if (user) {
-      window.localStorage.setItem('andrew_user', JSON.stringify(user));
-    }
-  }, [user]);
-
-  // Sesión de Supabase
-  useEffect(() => {
-    const loadSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) return;
-
-      const session = data?.session;
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        const u = session.user;
         const userData = {
-          name: session.user.user_metadata?.name || 'Usuario',
-          email: session.user.email,
-          phone: session.user.user_metadata?.phone || '',
-          address: session.user.user_metadata?.address || '',
+          id: u.id,
+          email: u.email,
+          role: isAuthorizedAdminEmail(u.email) ? 'ADMIN' : 'CLIENTE',
+          nombre: u.user_metadata?.full_name || u.user_metadata?.nombre || u.email.split('@')[0],
+          supabaseUser: u
         };
         setUser(userData);
-        setCartItems(getStoredCart(userData));
+        try {
+          sessionStorage.setItem('andrew_session_user', JSON.stringify(userData));
+        } catch {
+          // ignore
+        }
       }
-    };
+    });
 
-    loadSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
+        const u = session.user;
         const userData = {
-          name: session.user.user_metadata?.name || 'Usuario',
-          email: session.user.email,
-          phone: session.user.user_metadata?.phone || '',
-          address: session.user.user_metadata?.address || '',
+          id: u.id,
+          email: u.email,
+          role: isAuthorizedAdminEmail(u.email) ? 'ADMIN' : 'CLIENTE',
+          nombre: u.user_metadata?.full_name || u.user_metadata?.nombre || u.email.split('@')[0],
+          supabaseUser: u
         };
         setUser(userData);
-        setCartItems((prev) => mergeCartItems(prev, getStoredCart(userData)));
+        try {
+          sessionStorage.setItem('andrew_session_user', JSON.stringify(userData));
+        } catch {
+          // ignore
+        }
       } else {
-        setUser(null);
-        setCartItems(getStoredCart(null));
+        setUser((prev) => (isAuthorizedAdminEmail(prev?.email) && !prev?.supabaseUser ? prev : null));
       }
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, [getStoredCart, mergeCartItems]);
+  }, []);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [pagina]);
-
-  const closeProductDetail = () => {
-    setSelectedProduct(null);
-    navigateTo('productos');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    try {
+      sessionStorage.removeItem('andrew_session_user');
+    } catch {
+      // ignore
+    }
+    if (currentRoute === 'mis_pedidos' || currentRoute === 'admin' || currentRoute === 'checkout') {
+      setCurrentRoute('inicio');
+    }
   };
 
-  const filteredProducts = products.filter((item) => {
-    const query = searchQuery.toLowerCase().trim();
-    const searchMatch =
-      !query ||
-      item.equipo.toLowerCase().includes(query) ||
-      item.liga.toLowerCase().includes(query) ||
-      item.categoria.toLowerCase().includes(query);
+  const handleNavigate = (route, query = '') => {
+    if (user?.role === 'ADMIN') {
+      setCurrentRoute('admin');
+      setIsCartOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setCurrentRoute(route);
+    try {
+      window.history.pushState({ route, productId: selectedProductId }, '', `#${route}`);
+    } catch {
+      // ignore
+    }
+    if (query) {
+      setSearchQuery(query);
+    } else if (route !== 'catalogo') {
+      setSearchQuery('');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    const leagueMatch = leagueFilter === 'all' || item.liga === leagueFilter;
+  const handleOpenProduct = (productId) => {
+    setSelectedProductId(productId);
+    setCurrentRoute('producto-detalle');
+    try {
+      window.history.pushState({ route: 'producto-detalle', productId }, '', `#producto-${productId}`);
+    } catch {
+      // ignore
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    const priceMatch =
-      priceFilter === 'all' ||
-      (priceFilter === 'under-92' && item.precio < 92) ||
-      (priceFilter === '92-95' && item.precio >= 92 && item.precio <= 95) ||
-      (priceFilter === 'over-95' && item.precio > 95);
+  const handleSearchSubmit = (termino) => {
+    setSearchQuery(termino);
+    setCurrentRoute('catalogo');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    const categoryMatch = categoryFilter === 'all' || item.categoria.toLowerCase() === categoryFilter.toLowerCase();
-
-    return searchMatch && leagueMatch && priceMatch && categoryMatch;
-  });
+  const handleOpenOrders = () => {
+    setCurrentRoute('mis_pedidos');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
-    <AppProvider
-      value={{
-        user,
-        cartItems,
-        cartCount,
-        products,
-        addToCart,
-        removeCartItem,
-        updateCartQuantity,
-        clearCart,
-        setUser,
-      }}
-    >
-      <div className={`min-h-screen bg-[#050505] text-white font-sans selection:bg-[#22c55e] selection:text-black ${theme === 'light' ? 'light-theme' : ''}`}>
-        {/* Barra de Navegación Premium */}
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col justify-between">
+        {/* Floating Header */}
         <Navbar 
-          pagina={pagina} 
-          navigateTo={navigateTo} 
-          cartCount={cartCount} 
-          toggleCart={toggleCart} 
-          wishlistCount={wishlistCount}
-          toggleWishlist={toggleWishlist}
-          theme={theme}
-          toggleTheme={toggleTheme}
+          currentRoute={currentRoute}
+          onNavigate={handleNavigate} 
+          onSearchSubmit={handleSearchSubmit}
+          user={user}
+          onLogout={handleLogout}
+          onOpenAuth={() => {
+            setAuthModalMode('login');
+            setCurrentRoute('auth');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenCart={() => {
+            if (user?.role !== 'ADMIN') setIsCartOpen(true);
+          }}
+          onOpenOrders={handleOpenOrders}
+          cartCount={cartCount}
         />
 
-        {/* Enrutador de Páginas */}
-        {pagina === 'detalle' && selectedProduct ? (
-          <ProductDetail 
-            item={selectedProduct} 
-            onBack={closeProductDetail} 
-            onAddToCart={addToCart} 
-            wishlistItems={wishlistItems}
-            onToggleWishlist={handleToggleWishlist}
-          />
-        ) : pagina === 'productos' ? (
-          <ProductsPage
-            products={products}
-            filteredProducts={filteredProducts}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            leagueFilter={leagueFilter}
-            setLeagueFilter={setLeagueFilter}
-            priceFilter={priceFilter}
-            setPriceFilter={setPriceFilter}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            onBack={() => navigateTo('home')}
-            onViewDetails={openProductDetail}
-            addToCart={addToCart}
-            wishlistItems={wishlistItems}
-            onToggleWishlist={handleToggleWishlist}
-          />
-        ) : pagina === 'checkout' ? (
-          !user ? (
-            <Register 
-              onBack={() => navigateTo('productos')} 
-              onLogin={(userData) => {
-                handleLogin(userData);
-                navigateTo('checkout');
-              }} 
-              messageOverride="Por seguridad de tu transacción, por favor inicia sesión o regístrate en Andrew Camisetas antes de realizar tu pago por Yape, Plin o Transferencia Bancaria."
-            />
-          ) : (
-            <Checkout 
-              cartItems={cartItems} 
-              onBack={() => navigateTo('productos')} 
-              onClearCart={clearCart} 
-            />
-          )
-        ) : pagina === 'buscar' ? (
-          <SearchPage
-            products={products}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onBack={() => navigateTo('productos')}
-            onViewDetails={openProductDetail}
-            addToCart={addToCart}
-            wishlistItems={wishlistItems}
-            onToggleWishlist={handleToggleWishlist}
-          />
-        ) : pagina === 'perfil' ? (
-          user ? (
-            <UserProfile 
-              user={user} 
-              onBack={() => navigateTo('home')} 
-              onLogout={handleLogout} 
-              onUpdateUser={handleUpdateUser}
-            />
-          ) : (
-            <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
-          )
-        ) : pagina === 'registro' ? (
-          user ? (
-            <UserProfile 
-              user={user} 
-              onBack={() => navigateTo('home')} 
-              onLogout={handleLogout} 
-              onUpdateUser={handleUpdateUser}
-            />
-          ) : (
-            <Register onBack={() => navigateTo('home')} onLogin={handleLogin} />
-          )
-        ) : pagina === 'nosotros' ? (
-          <About onBack={() => navigateTo('home')} />
-        ) : pagina === 'faq' ? (
-          <FAQ onBack={() => navigateTo('home')} />
-        ) : pagina === 'rastrear' ? (
-          <OrderTracker onBack={() => navigateTo('home')} />
-        ) : (
-          <Home 
-            products={products} 
-            navigateTo={navigateTo} 
-            onViewDetails={openProductDetail} 
-            addToCart={addToCart} 
-            wishlistItems={wishlistItems}
-            onToggleWishlist={handleToggleWishlist}
-            theme={theme}
-          />
+        {/* Aviso visible y recuperable si el servidor de Supabase no responde */}
+        {servidorOffline && (
+          <div className="fixed bottom-4 left-4 z-40 max-w-sm bg-surface-card border border-amber-500/50 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <span className="font-['Montserrat',sans-serif] font-black uppercase text-amber-600 dark:text-amber-400 block">
+                Modo sin conexión al servidor
+              </span>
+              <span className="text-txt-muted font-medium block">
+                Mostrando catálogo guardado localmente.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                resetProductosSyncCooldown();
+                getProductos(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-black uppercase text-[10px] shrink-0 cursor-pointer transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
         )}
 
-        {/* Bolsa de Compra (Drawer) */}
-        <CartDrawer
-          open={cartOpen}
-          onClose={() => setCartOpen(false)}
-          cartItems={cartItems}
-          onRemove={removeCartItem}
-          onIncrement={(id) => updateCartQuantity(id, 1)}
-          onDecrement={(id) => updateCartQuantity(id, -1)}
-          onCheckout={() => navigateTo('checkout')}
-        />
+        {/* Main Content Router con RBAC y Suspense */}
+        <main className="flex-grow">
+          <Suspense fallback={<RouteLoadingFallback />}>
+            {currentRoute === 'admin' ? (
+              user?.role === 'ADMIN' ? (
+                <AdminPanelPage onBackToHome={() => handleNavigate('inicio')} />
+              ) : (
+                <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-500">
+                    <span className="text-2xl">🔒</span>
+                  </div>
+                  <h2 className="font-['Montserrat',sans-serif] font-black text-2xl uppercase text-txt-main">
+                    Acceso Restringido
+                  </h2>
+                  <p className="text-txt-muted text-xs sm:text-sm max-w-md">
+                    Esta sección está protegida. Debes iniciar sesión con credenciales de Administrador para gestionar el inventario y pedidos.
+                  </p>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setAuthModalMode('login');
+                        setCurrentRoute('auth');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="bg-[#22c55e] text-black font-black text-xs uppercase px-5 py-2.5 rounded-xl cursor-pointer hover:bg-[#1fa75d] transition-colors"
+                    >
+                      Identificarme como Admin
+                    </button>
+                    <button
+                      onClick={() => handleNavigate('inicio')}
+                      className="bg-surface-card border border-stroke text-txt-main font-bold text-xs uppercase px-5 py-2.5 rounded-xl cursor-pointer hover:bg-surface-sub transition-colors"
+                    >
+                      Volver al Inicio
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : currentRoute === 'auth' ? (
+              <AuthPage 
+                initialMode={authModalMode}
+                onLoginSuccess={(userData) => {
+                  setUser(userData);
+                  try {
+                    sessionStorage.setItem('andrew_session_user', JSON.stringify(userData));
+                  } catch {
+                    // ignore
+                  }
+                  addToast(`¡Bienvenido, ${userData.nombre || 'Crack'}!`, 'success');
+                  if (userData.role === 'ADMIN') {
+                    setPostLoginRoute(null);
+                    setIsCartOpen(false);
+                    setCurrentRoute('admin');
+                  } else if (postLoginRoute) {
+                    setCurrentRoute(postLoginRoute);
+                    setPostLoginRoute(null);
+                  } else {
+                    setCurrentRoute('inicio');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onBackToHome={() => handleNavigate('inicio')}
+                onGoToOrders={handleOpenOrders}
+              />
+            ) : currentRoute === 'checkout' ? (
+              <CheckoutStepByStepPage 
+                cart={cart}
+                user={user}
+                onOpenAuth={() => {
+                  setPostLoginRoute('checkout');
+                  setAuthModalMode('login');
+                  setCurrentRoute('auth');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onUpdateQuantity={updateQuantity}
+                onRemoveItem={removeItem}
+                onBackToCart={() => {
+                  setCurrentRoute('catalogo');
+                  setIsCartOpen(true);
+                }}
+                onGoToCatalog={() => handleNavigate('catalogo')}
+                onOrderSuccess={() => {
+                  clearCart(false);
+                  addToast('¡Pedido registrado con éxito!', 'success', 5000);
+                }}
+              />
+            ) : currentRoute === 'producto-detalle' ? (
+              <ProductDetailsPage 
+                key={selectedProductId}
+                productoId={selectedProductId}
+                onBackToCatalog={() => handleNavigate('catalogo')}
+                onCustomOrder={() => handleNavigate('pedir_a_medida')}
+                onSelectProduct={handleOpenProduct}
+                onAddToCart={addToCart}
+                onBuyNow={(prod) => {
+                  addToCart(prod);
+                  setIsCartOpen(false);
+                  handleNavigate('checkout');
+                }}
+              />
+            ) : currentRoute === 'catalogo' ? (
+              <CatalogoPage 
+                key={searchQuery || 'catalogo'}
+                initialSearchQuery={searchQuery}
+                onSelectProduct={handleOpenProduct}
+                onAddToCart={addToCart} 
+              />
+            ) : currentRoute === 'pedir_a_medida' ? (
+              <PedirAMedidaPage onBackToHome={() => handleNavigate('inicio')} />
+            ) : currentRoute === 'nosotros' ? (
+              <NosotrosPage onExploreCatalog={() => handleNavigate('catalogo')} />
+            ) : currentRoute === 'mis_pedidos' ? (
+              <MisPedidosPage 
+                user={user}
+                onOpenAuth={() => {
+                  setPostLoginRoute('mis_pedidos');
+                  setAuthModalMode('login');
+                  setCurrentRoute('auth');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onExploreCatalog={() => handleNavigate('catalogo')}
+                onBackToHome={() => handleNavigate('inicio')}
+              />
+            ) : currentRoute === 'faq' || currentRoute === 'terminos' ? (
+              <InfoPoliciesPage
+                key={currentRoute}
+                initialTab={currentRoute}
+                onBackToHome={() => handleNavigate('inicio')}
+                onExploreCatalog={() => handleNavigate('catalogo')}
+              />
+            ) : (
+              <HomePage 
+                onNavigate={handleNavigate} 
+              />
+            )}
+          </Suspense>
+        </main>
 
-        {/* Lista de Deseos (Drawer) */}
-        <WishlistDrawer
-          open={wishlistOpen}
-          onClose={() => setWishlistOpen(false)}
-          wishlistItems={wishlistItems}
-          onRemove={handleToggleWishlist}
-          onAddToCart={addToCart}
-          onViewDetails={openProductDetail}
-        />
+        {/* Official Sports Footer (Solo en vistas de cliente) */}
+        {user?.role !== 'ADMIN' && <Footer onNavigate={handleNavigate} user={user} />}
 
-        {/* Widget de Soporte Flotante */}
-        <SupportWidget />
+        {/* Widget Flotante Oficial de WhatsApp (Solo para clientes) */}
+        {user?.role !== 'ADMIN' && <WhatsAppFloatingWidget />}
 
-        {/* Pie de Página */}
-        <Footer navigateTo={navigateTo} />
-
-        {/* Notificaciones Flotantes (Toasts) */}
-        {toast && (
-          <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(null)} 
+        {/* Drawer Lateral del Carrito de Compras (Solo para clientes) */}
+        {user?.role !== 'ADMIN' && (
+          <CartDrawer 
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            cart={cart}
+            user={user}
+            onProceedToCheckout={() => {
+              setIsCartOpen(false);
+              setCurrentRoute('checkout');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onExploreCatalog={() => {
+              setIsCartOpen(false);
+              handleNavigate('catalogo');
+            }}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeItem}
+            onClearCart={() => clearCart(true)}
+            onOpenOrders={handleOpenOrders}
           />
         )}
       </div>
-    </AppProvider>
+    </ThemeProvider>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ToastProvider>
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
+    </ToastProvider>
+  );
+}

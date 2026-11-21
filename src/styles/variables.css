@@ -1,0 +1,114 @@
+/* ==========================================================================
+   VARIABLES GLOBALES, TIPOGRAFÍA Y RESET BASE
+   (Los colores del Modo Oscuro y Modo Claro viven en theme-dark.css y theme-light.css)
+   ========================================================================== */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sports: 'Montserrat', sans-serif;
+
+  --color-bg-dark: #0a0a0a;
+
+  /* Tokens unificados de diseño para Andrew Camisetas Fútbol */
+  --radius-card: 20px;
+  --radius-btn: 12px;
+  --radius-input: 10px;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Montserrat', var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  overflow-x: clip;
+  min-width: 320px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevención de desbordamiento en hijos de flex/grid y medios */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word;
+}
+
+::selection {
+  background-color: rgba(34, 197, 94, 0.3);
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+
+/* Scrollbar ultrafino deportivo */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+/* ==========================================================================
+   ESTILOS INTERACTIVOS GLOBALES - ANTIAZUL RESIDUAL
+   Garantiza que ningún input, botón, checkbox o enlace herede el azul del browser
+   ========================================================================== */
+
+/* Resaltado de foco general en verde neón Andrew */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  border-color: #22c55e !important;
+  box-shadow: 0 0 0 1px #22c55e, 0 0 12px rgba(34, 197, 94, 0.25) !important;
+}
+
+/* Enlaces globales - Sin azul predeterminado del navegador */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #22c55e;
+}
+
+/* Checkboxes y radios interactivos con acento verde oficial */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #22c55e;
+}

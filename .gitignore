@@ -48,3 +48,6 @@ Thumbs.db
 # Build artifacts (Django)
 build/
 *.pot
+
+.vercel
+.agents/
