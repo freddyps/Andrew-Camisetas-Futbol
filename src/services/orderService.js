@@ -5,6 +5,23 @@ const ORDERS_STORAGE_KEY = 'andrew_pedidos_locales';
 const MY_ORDER_IDS_KEY = 'andrew_mis_pedidos_ids';
 const DELETED_ORDER_IDS_KEY = 'andrew_pedidos_eliminados_ids';
 
+/**
+ * Limpia TODA la caché local de pedidos (localStorage + memoria).
+ * Se llama al hacer login con otra cuenta o logout, para evitar
+ * que los pedidos de una sesión anterior aparezcan en la siguiente.
+ */
+export function limpiarCachePedidosLocales() {
+  try {
+    localStorage.removeItem(ORDERS_STORAGE_KEY);
+    localStorage.removeItem(MY_ORDER_IDS_KEY);
+    localStorage.removeItem(DELETED_ORDER_IDS_KEY);
+  } catch {
+    // ignore
+  }
+  memoriaPedidos = null;
+  ultimoSyncPedidos = 0;
+}
+
 export function getMisPedidosIds() {
   try {
     const raw = localStorage.getItem(MY_ORDER_IDS_KEY);
@@ -189,6 +206,27 @@ export async function getPedidos(forzarSync = false) {
     });
 
   return localData;
+}
+
+/**
+ * Consulta paginada por rango en Supabase para historiales extensos (>100 pedidos).
+ */
+export async function getPedidosPaginados({ page = 0, pageSize = 50 } = {}) {
+  const from = Math.max(0, page * pageSize);
+  const to = from + pageSize - 1;
+  const { data, error, count } = await supabase
+    .from('pedidos')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
+  const items = Array.isArray(data) ? data : [];
+  return {
+    items,
+    total: typeof count === 'number' ? count : items.length,
+    hasMore: typeof count === 'number' ? to + 1 < count : items.length === pageSize
+  };
 }
 
 export async function guardarNuevoPedido(pedido) {

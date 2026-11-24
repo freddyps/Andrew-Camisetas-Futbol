@@ -9,7 +9,7 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { supabase } from './supabaseClient';
 import { isAuthorizedAdminEmail } from './utils/security';
-import { getProductos, isSupabaseProductosOffline, resetProductosSyncCooldown } from './services/productService';
+import { limpiarCachePedidosLocales } from './services/orderService';
 
 // Lazy loading para división de código (Code-Splitting) en producción
 const CatalogoPage = lazy(() => import('./pages/catalogo/CatalogoPage'));
@@ -66,16 +66,6 @@ function AppContent() {
     }
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [servidorOffline, setServidorOffline] = useState(() => isSupabaseProductosOffline());
-
-  // Escuchar estado de conectividad con Supabase para mostrar aviso recuperable sin bloquear la tienda
-  useEffect(() => {
-    const handleNetStatus = (e) => {
-      setServidorOffline(Boolean(e?.detail?.offline));
-    };
-    window.addEventListener('andrew_network_status', handleNetStatus);
-    return () => window.removeEventListener('andrew_network_status', handleNetStatus);
-  }, []);
   
   // Modales flotantes y redirección post-login
   const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register' | 'pedidos'
@@ -135,6 +125,17 @@ function AppContent() {
           nombre: u.user_metadata?.full_name || u.user_metadata?.nombre || u.email.split('@')[0],
           supabaseUser: u
         };
+        // Si el usuario de esta sesión es distinto al que había en sessionStorage,
+        // limpiar la caché de pedidos para evitar mezcla entre cuentas
+        try {
+          const prevSaved = sessionStorage.getItem('andrew_session_user');
+          const prevParsed = prevSaved ? JSON.parse(prevSaved) : null;
+          if (prevParsed && prevParsed.id !== userData.id) {
+            limpiarCachePedidosLocales();
+          }
+        } catch {
+          // ignore
+        }
         setUser(userData);
         try {
           sessionStorage.setItem('andrew_session_user', JSON.stringify(userData));
@@ -154,7 +155,14 @@ function AppContent() {
           nombre: u.user_metadata?.full_name || u.user_metadata?.nombre || u.email.split('@')[0],
           supabaseUser: u
         };
-        setUser(userData);
+        // Al cambiar de cuenta, limpiar la caché de pedidos del usuario anterior
+        // para que no se mezclen pedidos de distintas sesiones en el mismo navegador
+        setUser((prev) => {
+          if (prev && prev.id !== userData.id) {
+            limpiarCachePedidosLocales();
+          }
+          return userData;
+        });
         try {
           sessionStorage.setItem('andrew_session_user', JSON.stringify(userData));
         } catch {
@@ -172,6 +180,7 @@ function AppContent() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    limpiarCachePedidosLocales(); // limpiar pedidos del usuario saliente
     setUser(null);
     try {
       sessionStorage.removeItem('andrew_session_user');
@@ -247,30 +256,6 @@ function AppContent() {
           onOpenOrders={handleOpenOrders}
           cartCount={cartCount}
         />
-
-        {/* Aviso visible y recuperable si el servidor de Supabase no responde */}
-        {servidorOffline && (
-          <div className="fixed bottom-4 left-4 z-40 max-w-sm bg-surface-card border border-amber-500/50 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3 text-xs">
-            <div className="space-y-0.5">
-              <span className="font-['Montserrat',sans-serif] font-black uppercase text-amber-600 dark:text-amber-400 block">
-                Modo sin conexión al servidor
-              </span>
-              <span className="text-txt-muted font-medium block">
-                Mostrando catálogo guardado localmente.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                resetProductosSyncCooldown();
-                getProductos(true);
-              }}
-              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-black uppercase text-[10px] shrink-0 cursor-pointer transition-colors"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
 
         {/* Main Content Router con RBAC y Suspense */}
         <main className="flex-grow">
