@@ -1,7 +1,76 @@
 -- =============================================================================
--- ANDREW CAMISETAS DE FÚTBOL - SCRIPT DE SEGURIDAD RLS (ROW LEVEL SECURITY)
--- Ejecutar este script en el SQL Editor de tu proyecto de Supabase
+-- ANDREW CAMISETAS DE FÚTBOL - SCRIPT DE CREACIÓN DE TABLAS + SEGURIDAD RLS
+-- Ejecutar este script completo en el SQL Editor de tu proyecto de Supabase
 -- =============================================================================
+
+-- 0. CREACIÓN DE TABLAS BASE (si aún no existen)
+CREATE TABLE IF NOT EXISTS public.productos (
+  id text PRIMARY KEY,
+  nombre text NOT NULL,
+  equipo text,
+  liga text,
+  categoria text,
+  temporada text,
+  tipo text,
+  precio numeric NOT NULL DEFAULT 0,
+  precioAnterior numeric,
+  descripcion text,
+  imagen text,
+  imagenes jsonb DEFAULT '[]'::jsonb,
+  tallas jsonb DEFAULT '["S","M","L","XL"]'::jsonb,
+  "stockPorTalla" jsonb DEFAULT '{}'::jsonb,
+  stock integer DEFAULT 0,
+  "inStock" boolean DEFAULT true,
+  destacado boolean DEFAULT false,
+  nuevo boolean DEFAULT false,
+  rating numeric DEFAULT 5,
+  "reviewsCount" integer DEFAULT 0,
+  galeria jsonb DEFAULT '[]'::jsonb,
+  "precioOriginal" numeric,
+  badge text,
+  subcategoria text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.productos
+  ADD COLUMN IF NOT EXISTS rating numeric DEFAULT 5,
+  ADD COLUMN IF NOT EXISTS "reviewsCount" integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS galeria jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS "precioOriginal" numeric,
+  ADD COLUMN IF NOT EXISTS badge text,
+  ADD COLUMN IF NOT EXISTS subcategoria text;
+
+CREATE TABLE IF NOT EXISTS public.pedidos (
+  id text PRIMARY KEY,
+  user_id uuid,
+  user_email text,
+  fecha text,
+  estado text DEFAULT 'PENDIENTE_VERIFICACION',
+  modalidad text,
+  cliente jsonb DEFAULT '{}'::jsonb,
+  envio jsonb DEFAULT '{}'::jsonb,
+  items jsonb DEFAULT '[]'::jsonb,
+  finanzas jsonb DEFAULT '{}'::jsonb,
+  totales jsonb DEFAULT '{}'::jsonb,
+  "pagoVerificacion" jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS finanzas jsonb DEFAULT '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id text PRIMARY KEY,
+  nombre text NOT NULL,
+  ciudad text,
+  equipo text,
+  calificacion integer DEFAULT 5,
+  comentario text NOT NULL,
+  imagen text,
+  aprobado boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
 
 -- 1. Función auxiliar segura para verificar si el usuario autenticado es uno de los 2 Administradores (Freddy o Brice)
 CREATE OR REPLACE FUNCTION public.es_admin_andrew()
@@ -67,7 +136,7 @@ CREATE POLICY "pedidos_select_propietario_o_admin"
   FOR SELECT
   USING (
     public.es_admin_andrew()
-    OR (auth.uid() IS NOT NULL AND user_id = auth.uid()::text)
+    OR (auth.uid() IS NOT NULL AND user_id::text = auth.uid()::text)
     OR (auth.jwt() ->> 'email' IS NOT NULL AND lower(user_email) = lower(auth.jwt() ->> 'email'))
   );
 

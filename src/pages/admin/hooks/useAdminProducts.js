@@ -145,7 +145,16 @@ export function useAdminProducts({ onNotificar = () => {} }) {
           stock: nuevoStockTotal,
           inStock: nuevoStockTotal > 0
         };
-        supabase.from('productos').upsert([actualizado]).then(() => {}).catch(console.warn);
+        supabase
+          .from('productos')
+          .update({
+            stockPorTalla: nuevoStockPorTalla,
+            stock: nuevoStockTotal,
+            inStock: nuevoStockTotal > 0
+          })
+          .eq('id', id)
+          .then(() => {})
+          .catch(console.warn);
         return actualizado;
       }
       return p;
