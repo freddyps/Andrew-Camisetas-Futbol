@@ -11,6 +11,7 @@ export default function HeroSection({ onExplore = () => {}, onCustomOrder = () =
   const slides = [
     {
       fondo: '/banners/cr7_chilena_juventus.webp',
+      fondoMobile: '/banners/cr7_chilena_juventus_mobile.webp',
       badge: 'BIENVENIDOS A ANDREW CAMISETAS',
       linea1: 'ANDREW Y LOS',
       linea2: 'CAMPEONES DEL MUNDO',
@@ -33,11 +34,14 @@ export default function HeroSection({ onExplore = () => {}, onCustomOrder = () =
       className="relative w-full min-h-[520px] sm:min-h-[600px] h-[100svh] max-h-[960px] flex items-end justify-center overflow-hidden select-none pt-28 pb-10 sm:pb-14 lg:pb-20"
     >
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <img 
-          src={actual.fondo} 
-          alt="Andrew y los Campeones del Mundo" 
-          className="w-full h-full object-cover object-[52%_32%] sm:object-[center_28%] filter contrast-115 brightness-105 saturate-110 transition-all duration-700"
-        />
+        <picture className="block w-full h-full">
+          <source media="(max-width: 767px)" srcSet={actual.fondoMobile} />
+          <img 
+            src={actual.fondo} 
+            alt="Andrew y los Campeones del Mundo" 
+            className="w-full h-full object-cover object-center sm:object-[center_28%] filter contrast-115 brightness-105 saturate-110 transition-all duration-700"
+          />
+        </picture>
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/20"></div>
       </div>
 

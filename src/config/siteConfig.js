@@ -22,7 +22,6 @@ export const SITE_CONFIG = {
   },
 
   correoAtencion: 'contacto@andrewcamisetas.com',
-  adminEmail: 'brice.control@andrewcamisetas.pe',
 
   // Redes Sociales Oficiales
   redes: {
@@ -56,6 +55,11 @@ export const SITE_CONFIG = {
       titular: 'Brice Andrew Paypay Salvador',
       qrYape: '/pagos/qr_yape.webp',
       qrPlin: '/pagos/qr_plin.webp'
+    },
+    yapePlinSecundario: {
+      numero: '963 345 510',
+      numeroRaw: '963345510',
+      titular: 'Freddy Paypay Salvador'
     }
   }
 };
