@@ -31,7 +31,7 @@ export default function HeroSection({ onExplore = () => {}, onCustomOrder = () =
   return (
     <section
       id="hero"
-      className="relative w-full min-h-[520px] sm:min-h-[600px] h-[100svh] max-h-[960px] flex items-end justify-center overflow-hidden select-none pt-28 pb-10 sm:pb-14 lg:pb-20"
+      className="relative w-full min-h-[560px] sm:min-h-[600px] h-[100dvh] max-h-[960px] flex items-end justify-center overflow-hidden select-none pt-28 pb-10 sm:pb-14 lg:pb-20"
     >
       <div className="absolute inset-0 z-0 overflow-hidden">
         <picture className="block w-full h-full">
