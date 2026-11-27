@@ -28,7 +28,6 @@ export default function StepPaymentTabs({
   comprobanteFile,
   comprobantePreview,
   onFileChange,
-  onCameraClick,
   onRemoveFile,
   codigoOperacion,
   setCodigoOperacion,
