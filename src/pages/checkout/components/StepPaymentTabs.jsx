@@ -144,22 +144,30 @@ export default function StepPaymentTabs({
                 </div>
 
                 {/* Cuenta 2: Freddy */}
-                <div className="bg-surface-card border border-stroke rounded-xl p-2.5 space-y-1">
+                <div
+                  onClick={() => onCopiar(DATOS_PAGO.yapePlinSecundario.numeroRaw, 'yp2')}
+                  className={`bg-surface-card border rounded-xl p-2.5 space-y-1 cursor-pointer transition-all ${
+                    copiado === 'yp2' ? 'border-andrew-primary ring-2 ring-andrew-primary/20' : 'border-stroke hover:border-andrew-primary/50'
+                  }`}
+                >
                   <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
                     <span className="font-mono text-lg sm:text-xl font-black text-txt-main">
-                      963 345 510
+                      {DATOS_PAGO.yapePlinSecundario.numero}
                     </span>
                     <button
                       type="button"
-                      onClick={() => onCopiar('963345510', 'yp2')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCopiar(DATOS_PAGO.yapePlinSecundario.numeroRaw, 'yp2');
+                      }}
                       className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-2.5 py-1 rounded-lg border border-stroke flex items-center gap-1 cursor-pointer transition-colors"
                     >
                       {copiado === 'yp2' ? <Check size={12} className="text-andrew-primary" /> : <Copy size={12} />}
-                      <span>{copiado === 'yp2' ? 'Copiado' : 'Copiar'}</span>
+                      <span>{copiado === 'yp2' ? 'Elegido y copiado' : 'Elegir / Copiar'}</span>
                     </button>
                   </div>
                   <p className="text-[11px] text-txt-muted font-medium">
-                    Titular: <strong className="text-txt-main">Freddy Paypay Salvador</strong> (Pago directo por número)
+                    Titular: <strong className="text-txt-main">{DATOS_PAGO.yapePlinSecundario.titular}</strong> (Pago directo por número)
                   </p>
                 </div>
 
