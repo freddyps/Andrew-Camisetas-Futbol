@@ -416,8 +416,11 @@ export default function MisPedidosPage({
                       </div>
                     </div>
 
-                    {/* PASO 2: PRENDAS SOLICITADAS */}
-                    <div className="space-y-3">
+                    {/* BLOQUES 2, 3 Y 4 EN 2 COLUMNAS PARA VER TODO SIN SCROLL */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                      <div className="space-y-4">
+                        {/* PASO 2: PRENDAS SOLICITADAS */}
+                        <div className="space-y-2">
                       <span className="text-xs sm:text-sm font-black uppercase text-txt-main tracking-wider block font-['Montserrat',sans-serif]">
                         2. PRENDAS SOLICITADAS EN TU ORDEN:
                       </span>
@@ -505,8 +508,10 @@ export default function MisPedidosPage({
                       </div>
                     </div>
 
-                    {/* PASO 4: RESUMEN DE PAGO Y LIQUIDACIÓN */}
-                    <div className="space-y-3">
+                      </div>
+
+                      {/* COLUMNA DERECHA: PASO 4 RESUMEN DE PAGO Y LIQUIDACIÓN */}
+                      <div className="space-y-2">
                       <span className="text-xs sm:text-sm font-black uppercase text-txt-main tracking-wider block font-['Montserrat',sans-serif]">
                         4. RESUMEN ECONÓMICO Y VALIDACIÓN DE PAGO:
                       </span>
@@ -574,6 +579,7 @@ export default function MisPedidosPage({
                           )}
                         </div>
                       </div>
+                    </div>
                     </div>
 
                   </div>
