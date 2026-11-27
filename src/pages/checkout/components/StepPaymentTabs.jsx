@@ -216,15 +216,15 @@ export default function StepPaymentTabs({
             setTitularCuentaPago={setTitularCuentaPago}
           />
 
-          <div className="bg-surface-sub border border-andrew-primary/40 rounded-2xl p-3 flex items-center gap-3 text-xs">
-            <div className="w-8 h-8 rounded-xl bg-andrew-primary/20 flex items-center justify-center text-andrew-primary shrink-0 font-bold text-base">
+          <div className="bg-andrew-primary/10 border-2 border-andrew-primary/50 rounded-2xl p-3.5 flex items-center gap-3.5 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-andrew-primary/20 flex items-center justify-center text-andrew-primary shrink-0 font-bold text-lg">
               📱
             </div>
             <div>
-              <span className="font-['Montserrat',sans-serif] font-black text-xs uppercase text-txt-main block">
+              <span className="font-['Montserrat',sans-serif] font-black text-xs sm:text-sm uppercase text-txt-main block tracking-wide">
                 ¿COMPRANDO DESDE EL CELULAR?
               </span>
-              <span className="text-[11px] text-txt-muted font-medium block">
+              <span className="text-xs sm:text-sm text-txt-main font-semibold block leading-snug mt-0.5">
                 También puedes enviar la captura directamente por WhatsApp una vez generado tu pedido.
               </span>
             </div>
