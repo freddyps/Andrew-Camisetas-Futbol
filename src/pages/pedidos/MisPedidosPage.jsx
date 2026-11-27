@@ -19,81 +19,24 @@ import {
   Lock,
   LogIn
 } from 'lucide-react';
-import { getPedidos, getPedidosSync, getMisPedidosIds } from '../../services/orderService';
 import { SITE_CONFIG } from '../../config/siteConfig';
+import { useMisPedidos } from './hooks/useMisPedidos';
 
 export default function MisPedidosPage({ 
   user = null, 
   onExploreCatalog = () => {},
   onOpenAuth = () => {}
 }) {
-  // Inicialización instantánea en 0ms desde caché/LocalStorage
-  const [pedidos, setPedidos] = useState(() => getPedidosSync());
-  const [cargando, setCargando] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const {
+    pedidosFiltrados,
+    cargando,
+    busqueda,
+    setBusqueda,
+    filtroEstado,
+    setFiltroEstado,
+    cargarPedidos
+  } = useMisPedidos(user);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-
-  const cargarPedidos = React.useCallback(async (mostrarAnimacion = false) => {
-    if (mostrarAnimacion) setCargando(true);
-    try {
-      const data = await getPedidos();
-      setPedidos(data || []);
-    } catch (err) {
-      console.warn('Error al cargar pedidos:', err);
-    } finally {
-      if (mostrarAnimacion) {
-        setTimeout(() => setCargando(false), 180);
-      } else {
-        setCargando(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    cargarPedidos(false);
-    const handleUpdate = () => setPedidos(getPedidosSync());
-    window.addEventListener('andrew_pedidos_updated', handleUpdate);
-    return () => window.removeEventListener('andrew_pedidos_updated', handleUpdate);
-  }, [cargarPedidos]);
-
-  // Regla de sesión y propiedad:
-  // 1. Si es ADMIN, ve todos los pedidos.
-  // 2. Si tiene sesión iniciada, ve los pedidos vinculados a su correo, ID de usuario o registrados en este dispositivo.
-  // 3. Si compró como invitado en este navegador, puede hacer seguimiento a los pedidos de su dispositivo (getMisPedidosIds).
-  const esAdmin = user?.role === 'ADMIN';
-
-  const pedidosFiltrados = React.useMemo(() => {
-    const misIdsDispositivo = getMisPedidosIds();
-    return pedidos.filter((p) => {
-      if (!esAdmin) {
-        const esDeEsteDispositivo = Boolean(p.id && misIdsDispositivo.includes(p.id));
-        const userEmail = (user?.email || '').toLowerCase().trim();
-        const orderEmail = (p.user_email || p.cliente?.email || '').toLowerCase().trim();
-        const esMioPorEmail = Boolean(userEmail && orderEmail && userEmail === orderEmail);
-        const esMioPorUserId = Boolean(user?.id && p.user_id && user.id === p.user_id);
-        if (!esMioPorEmail && !esMioPorUserId && !esDeEsteDispositivo) return false;
-      }
-
-      if (filtroEstado !== 'todos') {
-        const est = (p.estado || 'PENDIENTE_VERIFICACION').toLowerCase();
-        if (filtroEstado === 'pendientes' && !est.includes('pendiente')) return false;
-        if (filtroEstado === 'confirmados' && (!est.includes('confirmado') && !est.includes('adelanto'))) return false;
-        if (filtroEstado === 'entregados' && !est.includes('entregado')) return false;
-        if (filtroEstado === 'cancelados' && (!est.includes('cancelado') && !est.includes('rechazado'))) return false;
-      }
-
-      const q = busqueda.toLowerCase().trim();
-      if (!q) return true;
-      const id = (p.id || '').toLowerCase();
-      const nombre = (p.cliente?.nombre || p.nombreCliente || '').toLowerCase();
-      const tel = (p.cliente?.telefono || '').toLowerCase();
-      const destino = (p.cliente?.destino || '').toLowerCase();
-      const prendas = (p.items || []).map(i => i.nombre).join(' ').toLowerCase();
-
-      return id.includes(q) || nombre.includes(q) || tel.includes(q) || prendas.includes(q) || destino.includes(q);
-    });
-  }, [user, esAdmin, pedidos, filtroEstado, busqueda]);
 
   // Sincronizar pedido seleccionado únicamente dentro de los pedidos permitidos para el usuario actual
   useEffect(() => {
@@ -388,22 +331,22 @@ export default function MisPedidosPage({
                 const stepActivo = badgeActual.step;
 
                 return (
-                  <div className="bg-surface-card border border-stroke rounded-3xl p-6 sm:p-8 space-y-7 shadow-2xl">
+                  <div className="bg-surface-card border border-stroke rounded-2xl p-4 sm:p-5 space-y-4 shadow-lg">
                     
                     {/* CABECERA DE LA ORDEN SELECCIONADA */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stroke pb-6">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h2 className="font-['Montserrat',sans-serif] font-black text-2xl sm:text-3xl text-txt-main uppercase tracking-tight">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stroke pb-4">
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h2 className="font-['Montserrat',sans-serif] font-black text-lg sm:text-xl text-txt-main uppercase tracking-tight">
                             PEDIDO #{pedidoSeleccionado.id}
                           </h2>
-                          <span className={`inline-flex items-center gap-2 text-xs sm:text-sm font-black uppercase px-4 py-1.5 rounded-xl border ${badgeActual.clase}`}>
-                            <BadgeIcon size={15} strokeWidth={2.5} />
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase px-3 py-1 rounded-lg border ${badgeActual.clase}`}>
+                            <BadgeIcon size={13} strokeWidth={2.5} />
                             <span>{badgeActual.label}</span>
                           </span>
                         </div>
-                        <p className="text-xs sm:text-sm font-semibold text-txt-muted flex items-center gap-2">
-                          <Calendar size={15} className="text-andrew-primary" />
+                        <p className="text-xs font-medium text-txt-muted flex items-center gap-1.5">
+                          <Calendar size={13} className="text-andrew-primary" />
                           <span>
                             Registrado el {pedidoSeleccionado.fecha || (pedidoSeleccionado.created_at ? new Date(pedidoSeleccionado.created_at).toLocaleString('es-PE') : 'Fecha reciente')}
                           </span>
