@@ -28,6 +28,7 @@ export default function StepPaymentTabs({
   comprobanteFile,
   comprobantePreview,
   onFileChange,
+  onCameraClick,
   onRemoveFile,
   codigoOperacion,
   setCodigoOperacion,
@@ -38,6 +39,8 @@ export default function StepPaymentTabs({
   onRegresarPaso2,
   onFinalizarPedido
 }) {
+  const [titularSeleccionado, setTitularSeleccionado] = React.useState('andrew');
+
   return (
     <div className="bg-surface-card border border-stroke rounded-3xl p-5 sm:p-7 shadow-xl transition-colors">
       {/* Cabecera del Paso 3 */}
@@ -92,87 +95,90 @@ export default function StepPaymentTabs({
             </button>
           </div>
 
-          {/* Caja Corporativa de Yape / Plin con QR y datos */}
-          <div className="bg-surface-sub border border-stroke rounded-2xl p-4 sm:p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-
-              {/* Visualizador de Código QR Oficial */}
-              <PaymentQrVisualizer
-                metodoPago={metodoPago}
-                onOpenModal={() => setModalQrOpen(true)}
-              />
-
-              {/* Datos de Yape / Plin (2 Titulares Autorizados) */}
-              <div className="sm:col-span-7 space-y-2.5 text-center sm:text-left">
-                <div>
-                  <span className="text-[11px] font-black uppercase text-txt-muted tracking-wider block">
-                    NÚMEROS OFICIALES {metodoPago === 'plin' ? 'PLIN' : 'YAPE'} (ELIGE CUALQUIERA):
+          {/* 1. Elegir a qué número/titular pagar */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-black uppercase text-txt-muted tracking-wider block">
+              1. ELIGE EL NÚMERO DE DESTINO:
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setTitularSeleccionado('andrew')}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  titularSeleccionado === 'andrew'
+                    ? 'bg-andrew-primary/15 border-andrew-primary ring-2 ring-andrew-primary/20'
+                    : 'bg-surface-sub border-stroke hover:border-andrew-primary/40'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-mono text-sm sm:text-base font-black text-txt-main">
+                    {DATOS_PAGO.yapePlin.numero}
+                  </span>
+                  <span className="text-[9px] font-black uppercase bg-andrew-primary/20 text-andrew-primary px-1.5 py-0.5 rounded">
+                    Con QR
                   </span>
                 </div>
+                <span className="text-[11px] text-txt-muted font-semibold block truncate mt-0.5">
+                  Andrew · {DATOS_PAGO.yapePlin.titular}
+                </span>
+              </button>
 
-                {/* Cuenta 1: Brice Andrew (Con QR) */}
-                <div
-                  onClick={() => onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'yp1')}
-                  className={`bg-surface-card border rounded-xl p-2.5 space-y-1 cursor-pointer transition-all ${
-                    copiado === 'yp1' ? 'border-andrew-primary ring-2 ring-andrew-primary/20' : 'border-stroke hover:border-andrew-primary/50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-lg sm:text-xl font-black text-txt-main">
+              <button
+                type="button"
+                onClick={() => setTitularSeleccionado('freddy')}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  titularSeleccionado === 'freddy'
+                    ? 'bg-andrew-primary/15 border-andrew-primary ring-2 ring-andrew-primary/20'
+                    : 'bg-surface-sub border-stroke hover:border-andrew-primary/40'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-mono text-sm sm:text-base font-black text-txt-main">
+                    {DATOS_PAGO.yapePlinSecundario.numero}
+                  </span>
+                  <span className="text-[9px] font-black uppercase bg-surface-card text-txt-muted px-1.5 py-0.5 rounded border border-stroke">
+                    N° directo
+                  </span>
+                </div>
+                <span className="text-[11px] text-txt-muted font-semibold block truncate mt-0.5">
+                  Freddy · {DATOS_PAGO.yapePlinSecundario.titular}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Mostrar solo los datos del titular elegido */}
+          <div className="bg-surface-sub border border-stroke rounded-2xl p-4 sm:p-5">
+            {titularSeleccionado === 'andrew' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                <PaymentQrVisualizer
+                  metodoPago={metodoPago}
+                  onOpenModal={() => setModalQrOpen(true)}
+                />
+                <div className="sm:col-span-7 space-y-3 text-center sm:text-left">
+                  <div className="bg-surface-card border border-stroke rounded-xl p-3 space-y-1">
+                    <span className="text-[10px] font-black uppercase text-txt-muted tracking-wider block">
+                      NÚMERO {metodoPago === 'plin' ? 'PLIN' : 'YAPE'} SELECCIONADO:
+                    </span>
+                    <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
+                      <span className="font-mono text-xl sm:text-2xl font-black text-txt-main">
                         {DATOS_PAGO.yapePlin.numero}
                       </span>
-                      <span className="text-[10px] font-black uppercase bg-andrew-primary/15 text-andrew-primary px-2 py-0.5 rounded-md">
-                        Con QR
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'yp1')}
+                        className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-3 py-1.5 rounded-lg border border-stroke flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        {copiado === 'yp1' ? <Check size={13} className="text-andrew-primary" /> : <Copy size={13} />}
+                        <span>{copiado === 'yp1' ? 'Copiado' : 'Copiar'}</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'yp1');
-                      }}
-                      className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-2.5 py-1 rounded-lg border border-stroke flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      {copiado === 'yp1' ? <Check size={12} className="text-andrew-primary" /> : <Copy size={12} />}
-                      <span>{copiado === 'yp1' ? 'Elegido y copiado' : 'Elegir / Copiar'}</span>
-                    </button>
+                    <p className="text-xs text-txt-muted font-medium">
+                      Titular: <strong className="text-txt-main">{DATOS_PAGO.yapePlin.titular}</strong>
+                    </p>
                   </div>
-                  <p className="text-[11px] text-txt-muted font-medium">
-                    Titular del QR: <strong className="text-txt-main">{DATOS_PAGO.yapePlin.titular}</strong>
-                  </p>
-                </div>
 
-                {/* Cuenta 2: Freddy */}
-                <div
-                  onClick={() => onCopiar(DATOS_PAGO.yapePlinSecundario.numeroRaw, 'yp2')}
-                  className={`bg-surface-card border rounded-xl p-2.5 space-y-1 cursor-pointer transition-all ${
-                    copiado === 'yp2' ? 'border-andrew-primary ring-2 ring-andrew-primary/20' : 'border-stroke hover:border-andrew-primary/50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
-                    <span className="font-mono text-lg sm:text-xl font-black text-txt-main">
-                      {DATOS_PAGO.yapePlinSecundario.numero}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCopiar(DATOS_PAGO.yapePlinSecundario.numeroRaw, 'yp2');
-                      }}
-                      className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-2.5 py-1 rounded-lg border border-stroke flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      {copiado === 'yp2' ? <Check size={12} className="text-andrew-primary" /> : <Copy size={12} />}
-                      <span>{copiado === 'yp2' ? 'Elegido y copiado' : 'Elegir / Copiar'}</span>
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-txt-muted font-medium">
-                    Titular: <strong className="text-txt-main">{DATOS_PAGO.yapePlinSecundario.titular}</strong> (Pago directo por número)
-                  </p>
-                </div>
-
-                {/* Monto exacto a pagar */}
-                <div className="bg-surface-card border border-andrew-primary/50 p-3 sm:p-3.5 rounded-xl flex items-center justify-between shadow-md">
+                  <div className="bg-surface-card border border-andrew-primary/50 p-3 sm:p-3.5 rounded-xl flex items-center justify-between shadow-md">
                   <div>
                     <span className="text-xs font-black text-txt-muted uppercase block tracking-wider">MONTO EXACTO A PAGAR:</span>
                     <span className="text-[11px] text-txt-main font-semibold block">
@@ -196,8 +202,56 @@ export default function StepPaymentTabs({
                   <span>Escanea el QR desde tu app de Yape o Plin al instante.</span>
                 </div>
               </div>
-
             </div>
+            ) : (
+              <div className="space-y-3 text-center sm:text-left">
+                <div className="bg-surface-card border border-stroke rounded-xl p-4 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase text-txt-muted tracking-wider block">
+                    NÚMERO {metodoPago === 'plin' ? 'PLIN' : 'YAPE'} SELECCIONADO (PAGO DIRECTO):
+                  </span>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
+                    <span className="font-mono text-2xl sm:text-3xl font-black text-txt-main">
+                      {DATOS_PAGO.yapePlinSecundario.numero}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onCopiar(DATOS_PAGO.yapePlinSecundario.numeroRaw, 'yp2')}
+                      className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-3 py-1.5 rounded-lg border border-stroke flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      {copiado === 'yp2' ? <Check size={13} className="text-andrew-primary" /> : <Copy size={13} />}
+                      <span>{copiado === 'yp2' ? 'Copiado' : 'Copiar número'}</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-txt-muted font-medium">
+                    Titular: <strong className="text-txt-main">{DATOS_PAGO.yapePlinSecundario.titular}</strong>
+                  </p>
+                </div>
+
+                <div className="bg-surface-card border border-andrew-primary/50 p-3 sm:p-3.5 rounded-xl flex items-center justify-between shadow-md">
+                  <div>
+                    <span className="text-xs font-black text-txt-muted uppercase block tracking-wider">MONTO EXACTO A PAGAR:</span>
+                    <span className="text-[11px] text-txt-main font-semibold block">
+                      {modalidadPago === 'adelanto' ? 'Adelanto de Reserva (S/ 40)' : 'Pago Total (100%)'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-['Montserrat',sans-serif] font-black text-2xl sm:text-3xl text-andrew-primary">
+                      S/ {montoAPagarHoy.toFixed(2)}
+                    </span>
+                    {saldoRestante > 0 && (
+                      <span className="text-[11px] text-txt-muted font-bold block">
+                        Saldo al recibir: S/ {saldoRestante.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-txt-muted font-medium">
+                  <CheckCircle2 size={15} className="text-andrew-primary shrink-0" />
+                  <span>Copia el número y realiza el {metodoPago === 'plin' ? 'Plin' : 'Yape'} directo desde tu app.</span>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
