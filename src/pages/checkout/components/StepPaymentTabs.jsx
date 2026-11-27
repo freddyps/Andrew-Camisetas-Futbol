@@ -102,27 +102,64 @@ export default function StepPaymentTabs({
                 onOpenModal={() => setModalQrOpen(true)}
               />
 
-              {/* Datos de Yape / Plin */}
-              <div className="sm:col-span-7 space-y-3 text-center sm:text-left">
+              {/* Datos de Yape / Plin (2 Titulares Autorizados) */}
+              <div className="sm:col-span-7 space-y-2.5 text-center sm:text-left">
                 <div>
-                  <span className="text-xs font-black uppercase text-txt-muted tracking-wider block">
-                    NÚMERO OFICIAL {metodoPago === 'plin' ? 'PLIN' : 'YAPE'}:
+                  <span className="text-[11px] font-black uppercase text-txt-muted tracking-wider block">
+                    NÚMEROS OFICIALES {metodoPago === 'plin' ? 'PLIN' : 'YAPE'} (ELIGE CUALQUIERA):
                   </span>
-                  <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1">
-                    <span className="font-['Montserrat',sans-serif] font-black text-2xl sm:text-3xl text-txt-main tracking-wider">
-                      {DATOS_PAGO.yapePlin.numero}
+                </div>
+
+                {/* Cuenta 1: Brice Andrew (Con QR) */}
+                <div
+                  onClick={() => onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'yp1')}
+                  className={`bg-surface-card border rounded-xl p-2.5 space-y-1 cursor-pointer transition-all ${
+                    copiado === 'yp1' ? 'border-andrew-primary ring-2 ring-andrew-primary/20' : 'border-stroke hover:border-andrew-primary/50'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-lg sm:text-xl font-black text-txt-main">
+                        {DATOS_PAGO.yapePlin.numero}
+                      </span>
+                      <span className="text-[10px] font-black uppercase bg-andrew-primary/15 text-andrew-primary px-2 py-0.5 rounded-md">
+                        Con QR
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'yp1');
+                      }}
+                      className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-2.5 py-1 rounded-lg border border-stroke flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      {copiado === 'yp1' ? <Check size={12} className="text-andrew-primary" /> : <Copy size={12} />}
+                      <span>{copiado === 'yp1' ? 'Elegido y copiado' : 'Elegir / Copiar'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-txt-muted font-medium">
+                    Titular del QR: <strong className="text-txt-main">{DATOS_PAGO.yapePlin.titular}</strong>
+                  </p>
+                </div>
+
+                {/* Cuenta 2: Freddy */}
+                <div className="bg-surface-card border border-stroke rounded-xl p-2.5 space-y-1">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2">
+                    <span className="font-mono text-lg sm:text-xl font-black text-txt-main">
+                      963 345 510
                     </span>
                     <button
                       type="button"
-                      onClick={() => onCopiar(DATOS_PAGO.yapePlin.numeroRaw, 'numero')}
-                      className="px-3 py-1.5 bg-surface-card hover:bg-input-bg border border-stroke rounded-xl text-xs font-extrabold text-txt-main flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                      onClick={() => onCopiar('963345510', 'yp2')}
+                      className="text-xs font-bold bg-surface-sub hover:bg-input-bg text-txt-main px-2.5 py-1 rounded-lg border border-stroke flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      {copiado === 'numero' ? <Check size={14} className="text-andrew-primary" /> : <Copy size={14} />}
-                      <span>{copiado === 'numero' ? '¡Copiado!' : 'Copiar'}</span>
+                      {copiado === 'yp2' ? <Check size={12} className="text-andrew-primary" /> : <Copy size={12} />}
+                      <span>{copiado === 'yp2' ? 'Copiado' : 'Copiar'}</span>
                     </button>
                   </div>
-                  <p className="text-xs sm:text-sm text-txt-muted font-medium mt-1">
-                    Titular: <strong className="text-txt-main font-black">{DATOS_PAGO.yapePlin.titular}</strong>
+                  <p className="text-[11px] text-txt-muted font-medium">
+                    Titular: <strong className="text-txt-main">Freddy Paypay Salvador</strong> (Pago directo por número)
                   </p>
                 </div>
 

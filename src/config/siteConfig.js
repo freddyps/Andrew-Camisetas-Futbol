@@ -50,15 +50,15 @@ export const SITE_CONFIG = {
   // Datos Oficiales de Pago (Exclusivo Yape y Plin)
   datosPago: {
     yapePlin: {
-      numero: '934 353 097',
-      numeroRaw: '934353097',
+      numero: '963 345 510',
+      numeroRaw: '963345510',
       titular: 'Brice Andrew Paypay Salvador',
       qrYape: '/pagos/qr_yape.webp',
       qrPlin: '/pagos/qr_plin.webp'
     },
     yapePlinSecundario: {
-      numero: '963 345 510',
-      numeroRaw: '963345510',
+      numero: '934 353 097',
+      numeroRaw: '934353097',
       titular: 'Freddy Paypay Salvador'
     }
   }
